@@ -116,20 +116,34 @@ app.get('/api/checklists/:id/download/:format', async (req, res) => {
                 const base64Data = parts[2];
                 
                 console.log('Serving base64 PDF:', filename);
+                console.log('Base64 length:', base64Data.length);
                 
-                // Log download
-                const ipAddress = req.ip || req.connection.remoteAddress;
-                const userAgent = req.get('User-Agent');
-                await incrementDownloads(id, format, ipAddress, userAgent);
-                
-                // Convert base64 to buffer
-                const pdfBuffer = Buffer.from(base64Data, 'base64');
-                
-                // Set headers and send
-                res.setHeader('Content-Type', 'application/pdf');
-                res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-                res.setHeader('Content-Length', pdfBuffer.length);
-                return res.send(pdfBuffer);
+                try {
+                    // Convert base64 to buffer
+                    const pdfBuffer = Buffer.from(base64Data, 'base64');
+                    console.log('PDF buffer size:', pdfBuffer.length);
+                    
+                    // Log download
+                    const ipAddress = req.ip || req.connection.remoteAddress;
+                    const userAgent = req.get('User-Agent');
+                    await incrementDownloads(id, format, ipAddress, userAgent);
+                    
+                    // Set headers and send
+                    res.setHeader('Content-Type', 'application/pdf');
+                    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+                    res.setHeader('Content-Length', pdfBuffer.length);
+                    
+                    console.log('Sending PDF response with headers:', {
+                        'Content-Type': 'application/pdf',
+                        'Content-Disposition': `attachment; filename="${filename}"`,
+                        'Content-Length': pdfBuffer.length
+                    });
+                    
+                    return res.send(pdfBuffer);
+                } catch (error) {
+                    console.error('Error processing base64 PDF:', error);
+                    return res.status(500).json({ error: 'Failed to process PDF' });
+                }
             }
             // Check for file-based PDF (local development)
             else if (content.startsWith('PDF File:')) {
