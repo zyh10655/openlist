@@ -23,7 +23,8 @@
     "cors": "^2.8.5",
     "markdown-pdf": "^11.0.0",
     "better-sqlite3": "^9.2.2",
-    "multer": "^1.4.5-lts.1"
+    "multer": "^1.4.5-lts.1",
+    "dotenv"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
