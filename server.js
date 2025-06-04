@@ -1,5 +1,4 @@
 require('dotenv').config();
-// server.js
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -268,6 +267,36 @@ app.get('/api/debug/db', async (req, res) => {
         });
     } catch (error) {
         res.json({ error: error.message, stack: error.stack });
+    }
+});
+
+// Temporary debug endpoint
+app.get('/api/debug', async (req, res) => {
+    try {
+        const stats = await getStats();
+        const checklists = await getAllChecklists();
+        const categories = await getCategories();
+        
+        // Get raw database info
+        const { pool } = require('./database');
+        const rawCount = await pool.query('SELECT COUNT(*) FROM checklists');
+        const rawChecklists = await pool.query('SELECT id, title, category, created_at FROM checklists ORDER BY id DESC LIMIT 5');
+        
+        res.json({
+            database: 'PostgreSQL',
+            stats,
+            checklistCount: checklists.length,
+            categories,
+            rawCount: rawCount.rows[0].count,
+            recentChecklists: rawChecklists.rows,
+            firstChecklist: checklists[0] || null
+        });
+    } catch (error) {
+        res.json({ 
+            error: error.message, 
+            stack: error.stack,
+            database: 'Error connecting'
+        });
     }
 });
 
