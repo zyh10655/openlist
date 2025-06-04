@@ -22,11 +22,16 @@ const storage = multer.diskStorage({
         }
     },
     filename: function (req, file, cb) {
-        // Generate filename based on title
-        const title = req.body.title || 'checklist';
-        const cleanTitle = title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-        const filename = `${cleanTitle}.pdf`;
-        cb(null, filename);
+        // Keep the original filename if it's a PDF
+        if (file.originalname.endsWith('.pdf')) {
+            cb(null, file.originalname);
+        } else {
+            // Generate filename based on title for non-PDF files
+            const title = req.body.title || 'checklist';
+            const cleanTitle = title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+            const filename = `${cleanTitle}-v1.0.pdf`;
+            cb(null, filename);
+        }
     }
 });
 
@@ -88,26 +93,49 @@ router.post('/checklists', adminAuth, upload.single('pdfFile'), async (req, res)
             description,
             icon: icon || '📋',
             category: category || 'Other',
-            // content: req.file ? `PDF File: ${req.file.filename}` : (req.body.content || ''),
-            content: req.file ? `PDF File: ${title}` : (req.body.content || ''),
+            content: req.body.content || '',
             features: featureList,
             items: [] // No items for PDF uploads
         };
         
-        console.log('Creating checklist with data:', checklistData);
+        // If PDF was uploaded and we're on Render (production)
+        if (req.file && (process.env.NODE_ENV === 'production' || process.env.RENDER)) {
+            console.log('Production environment detected, storing PDF as base64');
+            
+            // Read the file and store as base64
+            const fileBuffer = await fs.readFile(req.file.path);
+            const base64File = fileBuffer.toString('base64');
+            checklistData.content = `PDF_BASE64:${req.file.filename}:${base64File}`;
+            
+            console.log('PDF stored as base64, length:', base64File.length);
+            
+            // Clean up the temporary file
+            try {
+                await fs.unlink(req.file.path);
+                console.log('Temp file cleaned up');
+            } catch (err) {
+                console.error('Failed to clean up temp file:', err);
+            }
+        } else if (req.file) {
+            // Local development - store file reference
+            console.log('Development environment, storing file reference');
+            checklistData.content = `PDF File: ${req.file.filename}`;
+            
+            // Also create a markdown placeholder
+            const mdContent = `# ${title}\n\n${description}\n\n[Download PDF Version](${req.file.filename})\n\n## Features\n${featureList.map(f => `- ${f}`).join('\n')}`;
+            const mdFilename = req.file.filename.replace('.pdf', '.md');
+            await fs.writeFile(path.join(__dirname, 'checklists', mdFilename), mdContent);
+        }
+        
+        console.log('Creating checklist with data:', {
+            ...checklistData,
+            content: checklistData.content?.substring(0, 50) + '...' // Log only first 50 chars
+        });
         
         // Create checklist in database
         const checklistId = await createChecklist(checklistData);
         
         console.log('Checklist created with ID:', checklistId);
-        
-        // If PDF was uploaded, also create a markdown placeholder
-        if (req.file) {
-            const mdContent = `# ${title}\n\n${description}\n\n[Download PDF Version](${req.file.filename})\n\n## Features\n${featureList.map(f => `- ${f}`).join('\n')}`;
-            const mdFilename = req.file.filename.replace('.pdf', '.md');
-            await fs.writeFile(path.join(__dirname, 'checklists', mdFilename), mdContent);
-            console.log('Markdown file created:', mdFilename);
-        }
         
         res.json({ 
             id: checklistId, 
