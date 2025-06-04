@@ -1,0 +1,1225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenChecklist - Free Professional Industry Checklists</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #10b981;
+            --secondary-color: #059669;
+            --accent-color: #3b82f6;
+            --text-dark: #1f2937;
+            --text-light: #6b7280;
+            --bg-light: #f9fafb;
+            --border-color: #e5e7eb;
+            --warning-color: #f59e0b;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: var(--text-dark);
+            background-color: #ffffff;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Loading Spinner */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Header Styles */
+        header {
+            background: #fff;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 0;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: var(--text-dark);
+            transition: color 0.3s;
+        }
+
+        .nav-links a:hover {
+            color: var(--primary-color);
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 4rem 0;
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .hero p {
+            font-size: 1.25rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 0.75rem 2rem;
+            background: white;
+            color: var(--primary-color);
+            text-decoration: none;
+            border-radius: 5px;
+            transition: transform 0.3s, box-shadow 0.3s;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: white;
+            border: 2px solid white;
+        }
+
+        .btn-secondary:hover {
+            background: white;
+            color: var(--primary-color);
+        }
+
+        .btn-donate {
+            background: var(--warning-color);
+            color: white;
+        }
+
+        /* Stats Section */
+        .stats {
+            padding: 3rem 0;
+            background: var(--bg-light);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+            text-align: center;
+        }
+
+        .stat-item h3 {
+            font-size: 2.5rem;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+
+        /* Checklists Grid */
+        .checklists {
+            padding: 4rem 0;
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: var(--text-dark);
+        }
+
+        .section-subtitle {
+            text-align: center;
+            color: var(--text-light);
+            margin-bottom: 3rem;
+            font-size: 1.1rem;
+        }
+
+        .checklists-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .checklist-card {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+            border: 1px solid var(--border-color);
+        }
+
+        .checklist-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+        }
+
+        .checklist-header {
+            background: var(--bg-light);
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .checklist-icon {
+            font-size: 3rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .checklist-info {
+            padding: 1.5rem;
+        }
+
+        .checklist-title {
+            font-size: 1.25rem;
+            margin-bottom: 0.5rem;
+            color: var(--text-dark);
+        }
+
+        .checklist-description {
+            color: var(--text-light);
+            margin-bottom: 1rem;
+            font-size: 0.95rem;
+        }
+
+        .checklist-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            color: var(--text-light);
+        }
+
+        .checklist-stats {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .stat-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-size: 0.9rem;
+            color: var(--text-light);
+        }
+
+        .checklist-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .checklist-actions button {
+            flex: 1;
+            padding: 0.5rem;
+            border: 1px solid var(--border-color);
+            background: white;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .checklist-actions button:hover {
+            background: var(--bg-light);
+        }
+
+        .btn-download {
+            background: var(--primary-color) !important;
+            color: white !important;
+            border: none !important;
+        }
+
+        .btn-download:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        /* Format Buttons */
+        .format-buttons {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+        }
+
+        .format-btn {
+            padding: 0.5rem 1rem;
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+        }
+
+        .format-btn:hover {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        /* Disclaimer Styles */
+        .disclaimer-box {
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            padding: 1rem;
+            border-radius: 5px;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+        }
+
+        .disclaimer-box strong {
+            color: #d97706;
+        }
+
+        /* Community Section */
+        .community {
+            padding: 4rem 0;
+            background: var(--bg-light);
+        }
+
+        .community-features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .community-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .community-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: var(--primary-color);
+        }
+
+        /* Contribute Section */
+        .contribute {
+            padding: 4rem 0;
+            background: white;
+        }
+
+        .contribute-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .contribute-card {
+            padding: 2rem;
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .contribute-card:hover {
+            border-color: var(--primary-color);
+            transform: translateY(-5px);
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .modal-content {
+            background: white;
+            max-width: 800px;
+            margin: 2rem auto;
+            border-radius: 10px;
+            padding: 2rem;
+            position: relative;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            font-size: 2rem;
+            cursor: pointer;
+            color: var(--text-light);
+        }
+
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: var(--primary-color);
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s;
+            z-index: 1001;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        /* Footer */
+        footer {
+            background: var(--text-dark);
+            color: white;
+            padding: 3rem 0;
+            text-align: center;
+        }
+
+        .footer-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .footer-section h4 {
+            margin-bottom: 1rem;
+        }
+
+        .footer-section a {
+            color: #9ca3af;
+            text-decoration: none;
+            display: block;
+            padding: 0.25rem 0;
+        }
+
+        .footer-section a:hover {
+            color: white;
+        }
+
+        .open-source-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--primary-color);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            margin-top: 1rem;
+        }
+
+        /* Category Buttons */
+        .category-btn {
+            padding: 0.5rem 1rem;
+            background: white;
+            border: 2px solid var(--border-color);
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+            color: var(--text-dark);
+        }
+
+        .category-btn:hover {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        .category-btn.active {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+            
+            .hero h1 {
+                font-size: 2rem;
+            }
+            
+            .checklist-actions {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <nav class="container">
+            <div class="logo">
+                <span>🌟</span> OpenChecklist
+            </div>
+            <ul class="nav-links">
+                <li><a href="#home">Home</a></li>
+                <li><a href="#checklists">Browse</a></li>
+                <li><a href="#community">Community</a></li>
+                <li><a href="#contribute">Contribute</a></li>
+            </ul>
+            <div class="nav-buttons">
+                <button class="btn btn-donate" onclick="showDonateModal()">❤️ Support Us</button>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero" id="home">
+        <div class="container">
+            <h1>Free Professional Checklists for Everyone</h1>
+            <p>Open-source, community-driven checklists to help you succeed in any industry</p>
+            <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                <a href="#checklists" class="btn">Browse Checklists</a>
+                <a href="#contribute" class="btn btn-secondary">Contribute</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="stats">
+        <div class="container">
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <h3 id="checklistCount">-</h3>
+                    <p>Free Checklists</p>
+                </div>
+                <div class="stat-item">
+                    <h3 id="downloadCount">-</h3>
+                    <p>Downloads</p>
+                </div>
+                <div class="stat-item">
+                    <h3 id="contributorCount">-</h3>
+                    <p>Contributors</p>
+                </div>
+                <div class="stat-item">
+                    <h3 id="updateCount">-</h3>
+                    <p>Updates</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Checklists Section -->
+    <section class="checklists" id="checklists">
+        <div class="container">
+            <h2 class="section-title">Browse Free Checklists</h2>
+            <p class="section-subtitle">All checklists are free to download, modify, and share</p>
+            
+            <!-- Search Bar -->
+            <div style="max-width: 600px; margin: 2rem auto;">
+                <div style="position: relative;">
+                    <input 
+                        type="text" 
+                        id="searchInput" 
+                        placeholder="Search checklists by name, category, or keyword..." 
+                        style="width: 100%; padding: 1rem 3rem 1rem 1rem; border: 2px solid var(--border-color); border-radius: 50px; font-size: 1rem;"
+                    >
+                    <button 
+                        onclick="searchChecklists()" 
+                        style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); background: var(--primary-color); color: white; border: none; padding: 0.7rem 1.5rem; border-radius: 50px; cursor: pointer;"
+                    >
+                        🔍 Search
+                    </button>
+                </div>
+                <div id="searchResults" style="margin-top: 1rem; text-align: center; color: var(--text-light);"></div>
+            </div>
+            
+            <!-- Category Filters -->
+            <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; margin: 2rem 0;">
+                <button class="category-btn active" onclick="filterByCategory('all')">All Categories</button>
+                <button class="category-btn" onclick="filterByCategory('Business')">💼 Business</button>
+                <button class="category-btn" onclick="filterByCategory('Healthcare')">🏥 Healthcare</button>
+                <button class="category-btn" onclick="filterByCategory('Technology')">💻 Technology</button>
+                <button class="category-btn" onclick="filterByCategory('Creative Services')">🎨 Creative</button>
+                <button class="category-btn" onclick="filterByCategory('Education')">📚 Education</button>
+                <button class="category-btn" onclick="filterByCategory('Food & Beverage')">🍔 Food & Beverage</button>
+                <button class="category-btn" onclick="filterByCategory('Media & Entertainment')">🎬 Media</button>
+                <button class="category-btn" onclick="filterByCategory('Retail')">🛍️ Retail</button>
+            </div>
+            
+            <div class="checklists-grid" id="checklistsGrid">
+                <!-- Checklists will be dynamically loaded here -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Community Section -->
+    <section class="community" id="community">
+        <div class="container">
+            <h2 class="section-title">Join Our Community</h2>
+            <p class="section-subtitle">Built by professionals, for professionals</p>
+            <div class="community-features">
+                <div class="community-card">
+                    <div class="community-icon">💬</div>
+                    <h3>Discussion Forum</h3>
+                    <p>Ask questions, share experiences, and connect with others in your industry</p>
+                    <button class="btn" style="margin-top: 1rem;">Join Forum</button>
+                </div>
+                <div class="community-card">
+                    <div class="community-icon">🔄</div>
+                    <h3>Weekly Updates</h3>
+                    <p>Get notified about new checklists, updates, and community highlights</p>
+                    <button class="btn" style="margin-top: 1rem;">Subscribe</button>
+                </div>
+                <div class="community-card">
+                    <div class="community-icon">🎯</div>
+                    <h3>Success Stories</h3>
+                    <p>Read how others have used our checklists to achieve their goals</p>
+                    <button class="btn" style="margin-top: 1rem;">Read Stories</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contribute Section -->
+    <section class="contribute" id="contribute">
+        <div class="container">
+            <h2 class="section-title">Ways to Contribute</h2>
+            <p class="section-subtitle">Help us build the world's best collection of professional checklists</p>
+            <div class="contribute-options">
+                <div class="contribute-card">
+                    <h3>📝 Create Checklists</h3>
+                    <p>Share your expertise by creating new checklists for your industry</p>
+                </div>
+                <div class="contribute-card">
+                    <h3>🔍 Review & Improve</h3>
+                    <p>Help review and improve existing checklists with your knowledge</p>
+                </div>
+                <div class="contribute-card">
+                    <h3>🌐 Translate</h3>
+                    <p>Make checklists accessible globally by translating them</p>
+                </div>
+                <div class="contribute-card">
+                    <h3>💰 Sponsor</h3>
+                    <p>Support our infrastructure and community initiatives</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>Resources</h4>
+                    <a href="#">All Checklists</a>
+                    <a href="#">Templates</a>
+                    <a href="#">Guides</a>
+                    <a href="#">API Access</a>
+                </div>
+                <div class="footer-section">
+                    <h4>Community</h4>
+                    <a href="#">Forum</a>
+                    <a href="#">Contributors</a>
+                    <a href="#">Success Stories</a>
+                    <a href="#">Newsletter</a>
+                </div>
+                <div class="footer-section">
+                    <h4>About</h4>
+                    <a href="#">Mission</a>
+                    <a href="#">Open Source</a>
+                    <a href="#">Privacy</a>
+                    <a href="/disclaimer.html">Terms & Disclaimer</a>
+                </div>
+                <div class="footer-section">
+                    <h4>Connect</h4>
+                    <a href="#">GitHub</a>
+                    <a href="#">Twitter</a>
+                    <a href="#">Discord</a>
+                    <a href="#">Email</a>
+                </div>
+            </div>
+            <div style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #374151;">
+                <p style="font-size: 0.85rem; color: #9ca3af; max-width: 800px; margin: 0 auto; line-height: 1.6;">
+                    <strong>Disclaimer:</strong> All checklists are provided for informational purposes only and do not constitute professional advice. 
+                    Users are responsible for verifying all information and consulting with qualified professionals. 
+                    <a href="/disclaimer.html" style="color: var(--primary-color);">Read full disclaimer</a>
+                </p>
+            </div>
+            <div class="open-source-badge">
+                <span>🔓</span>
+                <span>Open Source • CC BY 4.0</span>
+            </div>
+            <p style="margin-top: 2rem; color: #9ca3af;">Made with ❤️ by the OpenChecklist Community</p>
+        </div>
+    </footer>
+    
+    <!-- Checklist Detail Modal -->
+    <div class="modal" id="checklistModal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal()">&times;</span>
+            <div id="modalContent">
+                <!-- Checklist details will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Donate Modal -->
+    <div class="modal" id="donateModal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeDonateModal()">&times;</span>
+            <div style="text-align: center;">
+                <h2 style="margin-bottom: 1rem;">Support OpenChecklist</h2>
+                <p style="margin-bottom: 2rem; color: var(--text-light);">
+                    Your donation helps us maintain servers, improve checklists, and support our community.
+                </p>
+                <div style="display: grid; gap: 1rem; max-width: 400px; margin: 0 auto;">
+                    <button class="btn" style="padding: 1rem;">$5 - Buy us a coffee</button>
+                    <button class="btn" style="padding: 1rem;">$25 - Support monthly hosting</button>
+                    <button class="btn" style="padding: 1rem;">$100 - Sponsor new checklist</button>
+                    <button class="btn" style="padding: 1rem;">Custom amount</button>
+                </div>
+                <p style="margin-top: 2rem; font-size: 0.9rem; color: var(--text-light);">
+                    All donations are processed securely. You'll receive a receipt and our eternal gratitude! 💚
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Disclaimer Modal -->
+    <div class="modal" id="disclaimerModal">
+        <div class="modal-content" style="max-width: 600px;">
+            <span class="close-modal" onclick="closeDisclaimerModal()">&times;</span>
+            <div style="text-align: center;">
+                <h2 style="margin-bottom: 1rem;">⚠️ Important Disclaimer</h2>
+                <div style="text-align: left; background: #fef3c7; border: 1px solid #f59e0b; padding: 1.5rem; border-radius: 5px; margin: 1rem 0;">
+                    <p style="margin-bottom: 1rem;">
+                        <strong>This checklist is for informational purposes only.</strong>
+                    </p>
+                    <ul style="margin-left: 1.5rem; color: var(--text-dark);">
+                        <li>NOT a substitute for professional advice</li>
+                        <li>Laws and regulations vary by location</li>
+                        <li>Always consult qualified professionals</li>
+                        <li>Use at your own risk</li>
+                    </ul>
+                </div>
+                <div style="margin-top: 1.5rem;">
+                    <button class="btn" onclick="acceptDisclaimer()" style="margin-right: 1rem;">I Understand & Accept</button>
+                    <button class="btn btn-secondary" onclick="closeDisclaimerModal()">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contribution Modal -->
+    <div class="modal" id="contributionModal">
+        <div class="modal-content" style="max-width: 500px;">
+            <span class="close-modal" onclick="closeContributionModal()">&times;</span>
+            <div style="text-align: center;">
+                <h2 style="margin-bottom: 1rem;">💡 Contribute to <span id="contributionChecklistTitle"></span></h2>
+                <p style="color: var(--text-light); margin-bottom: 2rem;">
+                    Help improve this checklist by sharing your expertise
+                </p>
+                <form id="contributionForm" style="text-align: left;">
+                    <input type="hidden" id="contributionChecklistId">
+                    
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Your Name</label>
+                        <input type="text" id="contributorName" required style="width: 100%; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 5px;">
+                    </div>
+                    
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Email</label>
+                        <input type="email" id="contributorEmail" required style="width: 100%; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 5px;">
+                    </div>
+                    
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Contribution Type</label>
+                        <select id="contributionType" style="width: 100%; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 5px;">
+                            <option value="item">New Checklist Item</option>
+                            <option value="correction">Correction/Update</option>
+                            <option value="resource">Additional Resource</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    
+                    <div style="margin-bottom: 1.5rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Your Contribution</label>
+                        <textarea id="contributionContent" required rows="5" style="width: 100%; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 5px;" placeholder="Share your suggestion, correction, or additional resource..."></textarea>
+                    </div>
+                    
+                    <div style="display: flex; gap: 1rem;">
+                        <button type="submit" class="btn" style="flex: 1;">Submit Contribution</button>
+                        <button type="button" class="btn btn-secondary" onclick="closeContributionModal()" style="flex: 1;">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast">
+        <span id="toastMessage">Download started!</span>
+    </div>
+
+    <script>
+        // API Configuration
+        const API_BASE = 'http://localhost:3000/api';
+
+        // State
+        let checklists = [];
+        let disclaimerAccepted = false;
+        
+        // Try to use localStorage with fallback
+        try {
+            disclaimerAccepted = localStorage.getItem('disclaimerAccepted') === 'true';
+        } catch (e) {
+            // localStorage not available (sandboxed environment)
+            disclaimerAccepted = false;
+        }
+
+        // Initialize the app
+        async function init() {
+            await loadChecklists();
+            await loadStats();
+        }
+
+        // Load checklists from API
+        async function loadChecklists() {
+            try {
+                const response = await fetch(`${API_BASE}/checklists`);
+                checklists = await response.json();
+                renderChecklists();
+            } catch (error) {
+                console.error('Failed to load checklists:', error);
+                showToast('Failed to load checklists. Please try again later.', 'error');
+            }
+        }
+
+        // Load statistics
+        async function loadStats() {
+            try {
+                const response = await fetch(`${API_BASE}/stats`);
+                const stats = await response.json();
+                
+                document.getElementById('checklistCount').textContent = stats.totalChecklists;
+                document.getElementById('downloadCount').textContent = stats.totalDownloads.toLocaleString();
+                document.getElementById('contributorCount').textContent = stats.totalContributors;
+                document.getElementById('updateCount').textContent = stats.updateFrequency;
+            } catch (error) {
+                console.error('Failed to load stats:', error);
+            }
+        }
+
+        // Render checklists
+        function renderChecklists() {
+            const grid = document.getElementById('checklistsGrid');
+            grid.innerHTML = checklists.map(checklist => `
+                <div class="checklist-card">
+                    <div class="checklist-header">
+                        <div class="checklist-icon">${checklist.icon}</div>
+                    </div>
+                    <div class="checklist-info">
+                        <h3 class="checklist-title">${checklist.title}</h3>
+                        <p class="checklist-description">${checklist.description}</p>
+                        <div class="checklist-meta">
+                            <span>v${checklist.version}</span>
+                            <span>Updated ${checklist.lastUpdated}</span>
+                        </div>
+                        <div class="checklist-stats">
+                            <span class="stat-badge">
+                                <span>⬇️</span> ${checklist.downloads.toLocaleString()}
+                            </span>
+                            <span class="stat-badge">
+                                <span>👥</span> ${checklist.contributors}
+                            </span>
+                        </div>
+                        <div class="checklist-actions">
+                            <button onclick="viewChecklist(${checklist.id})">View Details</button>
+                            <button class="btn-download" onclick="quickDownload(${checklist.id}, 'pdf')">
+                                Download PDF
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // View checklist details
+        async function viewChecklist(checklistId) {
+            const checklist = checklists.find(c => c.id === checklistId);
+            const modalContent = document.getElementById('modalContent');
+            
+            const formatButtons = Object.keys(checklist.formats).map(format => 
+                `<button class="format-btn" onclick="downloadChecklist(${checklist.id}, '${format}')">${format.toUpperCase()}</button>`
+            ).join('');
+            
+            modalContent.innerHTML = `
+                <div style="text-align: center; margin-bottom: 2rem;">
+                    <div style="font-size: 5rem; margin-bottom: 1rem;">${checklist.icon}</div>
+                    <h2>${checklist.title}</h2>
+                    <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 1rem;">
+                        <span class="stat-badge">⬇️ ${checklist.downloads.toLocaleString()} downloads</span>
+                        <span class="stat-badge">👥 ${checklist.contributors} contributors</span>
+                        <span class="stat-badge">🔄 v${checklist.version}</span>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 2rem;">
+                    <h3 style="margin-bottom: 1rem;">What's Included:</h3>
+                    <ul style="list-style: none; padding: 0;">
+                        ${checklist.features.map(feature => `
+                            <li style="padding: 0.5rem 0; color: var(--text-light);">
+                                <span style="color: var(--primary-color); font-weight: bold;">✓</span> ${feature}
+                            </li>
+                        `).join('')}
+                    </ul>
+                </div>
+                
+                <div class="disclaimer-box">
+                    <p style="margin: 0;">
+                        <strong>⚠️ Disclaimer:</strong> This checklist is for informational purposes only and does not constitute professional advice. 
+                        Always consult with qualified professionals for your specific situation.
+                    </p>
+                </div>
+                
+                <div style="background: var(--bg-light); padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem;">
+                    <h3 style="margin-bottom: 1rem;">Download in Your Preferred Format:</h3>
+                    <div class="format-buttons">
+                        ${formatButtons}
+                    </div>
+                </div>
+                
+                <div style="text-align: center; margin-bottom: 2rem;">
+                    <button class="btn btn-secondary" onclick="showContributionModal(${checklist.id}, '${checklist.title}')">
+                        💡 Contribute to This Checklist
+                    </button>
+                </div>
+                
+                <div style="text-align: center;">
+                    <p style="margin-top: 1rem; color: var(--text-light);">
+                        Licensed under CC BY 4.0 - Free to use, modify, and share
+                    </p>
+                </div>
+            `;
+            
+            document.getElementById('checklistModal').style.display = 'block';
+        }
+
+        // Quick download (PDF by default)
+        async function quickDownload(checklistId, format = 'pdf') {
+            await downloadChecklist(checklistId, format);
+        }
+
+        // Download checklist
+        async function downloadChecklist(checklistId, format) {
+            // Check disclaimer acceptance first
+            if (!disclaimerAccepted) {
+                document.getElementById('disclaimerModal').style.display = 'block';
+                // Store the pending download info
+                window.pendingDownload = { checklistId, format };
+                return;
+            }
+
+            const checklist = checklists.find(c => c.id === checklistId);
+            const downloadBtn = event.target;
+            const originalText = downloadBtn.innerHTML;
+            
+            try {
+                // Show loading state
+                downloadBtn.disabled = true;
+                downloadBtn.innerHTML = '<span class="loading"></span> Downloading...';
+                
+                // Create download link
+                const downloadUrl = `${API_BASE}/download/${checklistId}/${format}`;
+                
+                // Create temporary link and trigger download
+                const link = document.createElement('a');
+                link.href = downloadUrl;
+                // Change 3: Remove the version 
+                //link.download = `${checklist.title.toLowerCase().replace(/\s+/g, '-')}-v${checklist.version}.${format}`;
+                link.download = `${checklist.title.toLowerCase().replace(/\s+/g, '-')}.${format}`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                // Update UI
+                checklist.downloads += 1;
+                renderChecklists();
+                showToast(`Downloading ${checklist.title} in ${format.toUpperCase()} format`);
+                
+                // Close modal if open
+                if (document.getElementById('checklistModal').style.display === 'block') {
+                    closeModal();
+                }
+                
+            } catch (error) {
+                console.error('Download failed:', error);
+                showToast('Download failed. Please try again.', 'error');
+            } finally {
+                // Restore button state
+                downloadBtn.disabled = false;
+                downloadBtn.innerHTML = originalText;
+            }
+        }
+
+        // Accept disclaimer
+        function acceptDisclaimer() {
+            disclaimerAccepted = true;
+            
+            // Try to persist in localStorage if available
+            try {
+                localStorage.setItem('disclaimerAccepted', 'true');
+            } catch (e) {
+                // localStorage not available, just use session variable
+                console.log('localStorage not available, using session storage only');
+            }
+            
+            closeDisclaimerModal();
+            
+            // Execute pending download if any
+            if (window.pendingDownload) {
+                downloadChecklist(window.pendingDownload.checklistId, window.pendingDownload.format);
+                window.pendingDownload = null;
+            }
+        }
+
+        // Close disclaimer modal
+        function closeDisclaimerModal() {
+            document.getElementById('disclaimerModal').style.display = 'none';
+        }
+
+        // Show toast notification
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+            
+            toastMessage.textContent = message;
+            toast.style.background = type === 'error' ? '#ef4444' : 'var(--primary-color)';
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // Show donate modal
+        function showDonateModal() {
+            document.getElementById('donateModal').style.display = 'block';
+        }
+
+        // Close modals
+        function closeModal() {
+            document.getElementById('checklistModal').style.display = 'none';
+        }
+
+        function closeDonateModal() {
+            document.getElementById('donateModal').style.display = 'none';
+        }
+
+        // Close modals when clicking outside
+        window.onclick = function(event) {
+            const checklistModal = document.getElementById('checklistModal');
+            const donateModal = document.getElementById('donateModal');
+            const disclaimerModal = document.getElementById('disclaimerModal');
+            
+            if (event.target === checklistModal) {
+                closeModal();
+            }
+            if (event.target === donateModal) {
+                closeDonateModal();
+            }
+            if (event.target === disclaimerModal) {
+                closeDisclaimerModal();
+            }
+        }
+
+        // Filter by category
+        async function filterByCategory(category) {
+            // Update active button
+            document.querySelectorAll('.category-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Clear search
+            document.getElementById('searchInput').value = '';
+            document.getElementById('searchResults').textContent = '';
+            
+            try {
+                if (category === 'all') {
+                    await loadChecklists();
+                } else {
+                    const response = await fetch(`${API_BASE}/checklists/category/${encodeURIComponent(category)}`);
+                    checklists = await response.json();
+                    renderChecklists();
+                }
+            } catch (error) {
+                console.error('Failed to filter by category:', error);
+                showToast('Failed to filter checklists', 'error');
+            }
+        }
+
+        // Search functionality
+        async function searchChecklists() {
+            const query = document.getElementById('searchInput').value.trim();
+            const searchResults = document.getElementById('searchResults');
+            
+            if (!query) {
+                searchResults.textContent = '';
+                await loadChecklists();
+                return;
+            }
+            
+            try {
+                searchResults.textContent = 'Searching...';
+                const response = await fetch(`${API_BASE}/search?q=${encodeURIComponent(query)}`);
+                const results = await response.json();
+                
+                if (results.length === 0) {
+                    searchResults.textContent = 'No checklists found. Try a different search term.';
+                    checklists = [];
+                } else {
+                    searchResults.textContent = `Found ${results.length} checklist${results.length > 1 ? 's' : ''}`;
+                    checklists = results;
+                }
+                
+                renderChecklists();
+            } catch (error) {
+                console.error('Search failed:', error);
+                searchResults.textContent = 'Search failed. Please try again.';
+            }
+        }
+        
+        // Add enter key support for search
+        document.addEventListener('DOMContentLoaded', () => {
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) {
+                searchInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        searchChecklists();
+                    }
+                });
+                
+                // Clear search on empty input
+                searchInput.addEventListener('input', (e) => {
+                    if (e.target.value === '') {
+                        document.getElementById('searchResults').textContent = '';
+                        loadChecklists();
+                    }
+                });
+            }
+        });
+
+        // Show contribution modal
+        function showContributionModal(checklistId, checklistTitle) {
+            document.getElementById('contributionChecklistId').value = checklistId;
+            document.getElementById('contributionChecklistTitle').textContent = checklistTitle;
+            document.getElementById('contributionForm').reset();
+            document.getElementById('contributionModal').style.display = 'block';
+        }
+        
+        // Close contribution modal
+        function closeContributionModal() {
+            document.getElementById('contributionModal').style.display = 'none';
+        }
+        
+        // Handle contribution form submission
+        document.getElementById('contributionForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const data = {
+                checklistId: document.getElementById('contributionChecklistId').value,
+                name: document.getElementById('contributorName').value,
+                email: document.getElementById('contributorEmail').value,
+                type: document.getElementById('contributionType').value,
+                content: document.getElementById('contributionContent').value
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE}/contributions/submit`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showToast('Thank you! Your contribution has been submitted for review.');
+                    closeContributionModal();
+                } else {
+                    showToast('Failed to submit contribution. Please try again.', 'error');
+                }
+            } catch (error) {
+                console.error('Error submitting contribution:', error);
+                showToast('Failed to submit contribution. Please try again.', 'error');
+            }
+        });
+
+        // Initialize on load
+        window.onload = init;
+    </script>
+</body>
+</html>

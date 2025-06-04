@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenChecklist Admin Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #10b981;
+            --secondary-color: #059669;
+            --danger-color: #ef4444;
+            --text-dark: #1f2937;
+            --text-light: #6b7280;
+            --bg-light: #f9fafb;
+            --border-color: #e5e7eb;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-light);
+            color: var(--text-dark);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            background: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 2rem;
+        }
+
+        h1 {
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .admin-key-input {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            width: 200px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .stat-card h3 {
+            font-size: 2rem;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn:hover {
+            background: var(--secondary-color);
+        }
+
+        .btn-danger {
+            background: var(--danger-color);
+        }
+
+        .btn-secondary {
+            background: var(--text-light);
+        }
+
+        .checklist-table {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background: var(--bg-light);
+            font-weight: 600;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            max-width: 600px;
+            margin: 2rem auto;
+            padding: 2rem;
+            border-radius: 10px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+        }
+
+        .form-group textarea {
+            min-height: 100px;
+        }
+
+        .features-list,
+        .items-list {
+            margin-top: 1rem;
+        }
+
+        .feature-item,
+        .checklist-item {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .feature-item input,
+        .checklist-item input {
+            flex: 1;
+        }
+
+        .phase-group {
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background: var(--bg-light);
+            border-radius: 5px;
+        }
+
+        .analytics-section {
+            margin-top: 2rem;
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .chart-container {
+            height: 300px;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <h1>🛠️ OpenChecklist Admin</h1>
+            <div>
+                <input type="password" id="adminKey" class="admin-key-input" placeholder="Admin Key">
+                <button class="btn" onclick="loadDashboard()">Load Dashboard</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Stats -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3 id="totalChecklists">-</h3>
+                <p>Total Checklists</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="totalDownloads">-</h3>
+                <p>Total Downloads</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="uniqueUsers">-</h3>
+                <p>Unique Users</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="avgDownloads">-</h3>
+                <p>Avg Downloads/Checklist</p>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div style="margin-bottom: 1rem;">
+            <button class="btn" onclick="showCreateModal()">+ Create New Checklist</button>
+            <button class="btn btn-secondary" onclick="refreshData()">↻ Refresh</button>
+            <button class="btn" onclick="showContributions()" style="background: var(--warning-color);">
+                📝 View Contributions <span id="pendingCount" style="background: red; color: white; padding: 0.1rem 0.4rem; border-radius: 10px; margin-left: 0.5rem; display: none;">0</span>
+            </button>
+        </div>
+
+        <!-- Checklists Table -->
+        <div class="checklist-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Title</th>
+                        <th>Category</th>
+                        <th>Version</th>
+                        <th>Downloads</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="checklistsTableBody">
+                    <!-- Data will be loaded here -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Analytics -->
+        <div class="analytics-section">
+            <h2>Download Analytics</h2>
+            <div id="analyticsContent">
+                <!-- Analytics will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Create/Edit Modal -->
+    <div class="modal" id="checklistModal">
+        <div class="modal-content">
+            <h2 id="modalTitle">Create New Checklist</h2>
+            <form id="checklistForm">
+                <div class="form-group">
+                    <label>Title</label>
+                    <input type="text" id="title" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="description" required></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>Icon (Emoji)</label>
+                    <input type="text" id="icon" placeholder="📋" maxlength="2">
+                </div>
+                
+                <div class="form-group">
+                    <label>Category</label>
+                    <select id="category">
+                        <option value="Business">Business</option>
+                        <option value="Healthcare">Healthcare</option>
+                        <option value="Technology">Technology</option>
+                        <option value="Education">Education</option>
+                        <option value="Creative">Creative</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Features (one per line)</label>
+                    <textarea id="features" placeholder="150+ step checklist&#10;Permit templates&#10;Planning tools"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>Content (Markdown)</label>
+                    <textarea id="content" style="min-height: 200px;"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>OR Upload PDF File</label>
+                    <input type="file" id="pdfFile" accept=".pdf" onchange="handlePdfUpload(event)">
+                    <small style="color: var(--text-light);">Upload a PDF file instead of writing markdown content</small>
+                </div>
+                
+                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                    <button type="submit" class="btn">Save Checklist</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Contributions Modal -->
+    <div class="modal" id="contributionsModal">
+        <div class="modal-content" style="max-width: 900px;">
+            <h2>User Contributions</h2>
+            <div id="contributionsList" style="margin-top: 2rem;">
+                <!-- Contributions will be loaded here -->
+            </div>
+            <button class="btn btn-secondary" onclick="closeContributionsModal()" style="margin-top: 2rem;">Close</button>
+        </div>
+    </div>
+
+    <script>
+        let adminKey = '';
+        
+        function setAdminKey() {
+            adminKey = document.getElementById('adminKey').value;
+        }
+        
+        async function apiCall(url, method = 'GET', body = null) {
+            setAdminKey();
+            const options = {
+                method,
+                headers: {
+                    'X-Admin-Key': adminKey,
+                    'Content-Type': 'application/json'
+                }
+            };
+            
+            if (body) {
+                options.body = JSON.stringify(body);
+            }
+            
+            const response = await fetch(url, options);
+            if (!response.ok) {
+                throw new Error('API call failed');
+            }
+            return response.json();
+        }
+        
+        async function loadDashboard() {
+            try {
+                setAdminKey();
+                
+                // Load stats
+                const stats = await apiCall('/api/stats');
+                document.getElementById('totalChecklists').textContent = stats.totalChecklists;
+                document.getElementById('totalDownloads').textContent = stats.totalDownloads.toLocaleString();
+                document.getElementById('uniqueUsers').textContent = stats.uniqueUsers || '-';
+                document.getElementById('avgDownloads').textContent = 
+                    Math.round(stats.totalDownloads / stats.totalChecklists) || '-';
+                
+                // Load checklists
+                const checklists = await apiCall('/api/admin/checklists');
+                const tbody = document.getElementById('checklistsTableBody');
+                tbody.innerHTML = checklists.map(checklist => `
+                    <tr>
+                        <td>${checklist.id}</td>
+                        <td>${checklist.icon} ${checklist.title}</td>
+                        <td>${checklist.category || '-'}</td>
+                        <td>v${checklist.version}</td>
+                        <td>${checklist.downloads}</td>
+                        <td>
+                            <button class="btn btn-secondary" onclick="editChecklist(${checklist.id})">Edit</button>
+                            <button class="btn btn-danger" onclick="deleteChecklist(${checklist.id})">Delete</button>
+                        </td>
+                    </tr>
+                `).join('');
+                
+                // Load analytics
+                const analytics = await apiCall('/api/admin/analytics/downloads');
+                const analyticsContent = document.getElementById('analyticsContent');
+                analyticsContent.innerHTML = `
+                    <table style="width: 100%; margin-top: 1rem;">
+                        <thead>
+                            <tr>
+                                <th>Checklist</th>
+                                <th>Total Downloads</th>
+                                <th>Unique Users</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${analytics.map(item => `
+                                <tr>
+                                    <td>${item.title}</td>
+                                    <td>${item.download_count}</td>
+                                    <td>${item.unique_downloads}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+                
+                // Load contribution stats
+                const contribStats = await apiCall('/api/contributions/stats');
+                if (contribStats.pending_contributions > 0) {
+                    document.getElementById('pendingCount').style.display = 'inline';
+                    document.getElementById('pendingCount').textContent = contribStats.pending_contributions;
+                }
+                
+            } catch (error) {
+                alert('Failed to load dashboard. Check your admin key.');
+                console.error(error);
+            }
+        }
+        
+        function showCreateModal() {
+            document.getElementById('modalTitle').textContent = 'Create New Checklist';
+            document.getElementById('checklistForm').reset();
+            document.getElementById('checklistModal').style.display = 'block';
+        }
+        
+        function closeModal() {
+            document.getElementById('checklistModal').style.display = 'none';
+        }
+        
+        async function deleteChecklist(id) {
+            if (!confirm('Are you sure you want to delete this checklist?')) {
+                return;
+            }
+            
+            try {
+                await apiCall(`/api/admin/checklists/${id}`, 'DELETE');
+                alert('Checklist deleted successfully');
+                loadDashboard();
+            } catch (error) {
+                alert('Failed to delete checklist');
+            }
+        }
+        
+        let uploadedPdfFile = null;
+        
+        function handlePdfUpload(event) {
+            const file = event.target.files[0];
+            if (file && file.type === 'application/pdf') {
+                uploadedPdfFile = file;
+                document.getElementById('content').value = '[PDF Uploaded: ' + file.name + ']';
+                document.getElementById('content').disabled = true;
+            } else {
+                alert('Please upload a valid PDF file');
+                event.target.value = '';
+            }
+        }
+        
+        document.getElementById('checklistForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData();
+            formData.append('title', document.getElementById('title').value);
+            formData.append('description', document.getElementById('description').value);
+            formData.append('icon', document.getElementById('icon').value || '📋');
+            formData.append('category', document.getElementById('category').value);
+            formData.append('features', document.getElementById('features').value);
+            
+            // If PDF is uploaded, send it; otherwise send markdown content
+            if (uploadedPdfFile) {
+                formData.append('pdfFile', uploadedPdfFile);
+            } else {
+                formData.append('content', document.getElementById('content').value);
+            }
+            
+            try {
+                const response = await fetch('/api/admin/checklists', {
+                    method: 'POST',
+                    headers: {
+                        'X-Admin-Key': adminKey
+                    },
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(result.error || 'Failed to create checklist');
+                }
+                
+                alert('Checklist created successfully');
+                closeModal();
+                loadDashboard();
+                
+                // Reset form and file
+                document.getElementById('checklistForm').reset();
+                document.getElementById('content').disabled = false;
+                uploadedPdfFile = null;
+            } catch (error) {
+                console.error('Error details:', error);
+                alert('Failed to create checklist: ' + error.message);
+            }
+        });
+        
+        function refreshData() {
+            loadDashboard();
+        }
+        
+        async function showContributions() {
+            try {
+                const contributions = await apiCall('/api/contributions/pending');
+                const contributionsList = document.getElementById('contributionsList');
+                
+                if (contributions.length === 0) {
+                    contributionsList.innerHTML = '<p>No pending contributions.</p>';
+                } else {
+                    contributionsList.innerHTML = contributions.map(contrib => `
+                        <div style="background: var(--bg-light); padding: 1.5rem; margin-bottom: 1rem; border-radius: 8px;">
+                            <h4>${contrib.checklist_title}</h4>
+                            <p><strong>From:</strong> ${contrib.contributor_name} (${contrib.contributor_email})</p>
+                            <p><strong>Type:</strong> ${contrib.contribution_type}</p>
+                            <p><strong>Content:</strong></p>
+                            <div style="background: white; padding: 1rem; border-radius: 5px; margin: 0.5rem 0;">
+                                ${contrib.content}
+                            </div>
+                            <p><strong>Submitted:</strong> ${new Date(contrib.created_at).toLocaleString()}</p>
+                            <div style="margin-top: 1rem;">
+                                <button class="btn" onclick="reviewContribution(${contrib.id}, 'approved')">✓ Approve</button>
+                                <button class="btn btn-danger" onclick="reviewContribution(${contrib.id}, 'rejected')">✗ Reject</button>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+                
+                document.getElementById('contributionsModal').style.display = 'block';
+            } catch (error) {
+                alert('Failed to load contributions');
+            }
+        }
+        
+        function closeContributionsModal() {
+            document.getElementById('contributionsModal').style.display = 'none';
+        }
+        
+        async function reviewContribution(id, status) {
+            const notes = prompt(`Add notes for this ${status} contribution (optional):`);
+            
+            try {
+                await apiCall(`/api/contributions/${id}/review`, 'PUT', { status, notes });
+                alert(`Contribution ${status} successfully`);
+                showContributions(); // Reload list
+                loadDashboard(); // Update pending count
+            } catch (error) {
+                alert('Failed to review contribution');
+            }
+        }
+        
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('checklistModal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+    </script>
+</body>
+</html>
