@@ -6,7 +6,7 @@ const fs = require('fs').promises;
 const markdownPdf = require('markdown-pdf');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 
 // Middleware
 app.use(cors());
