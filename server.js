@@ -1,89 +1,58 @@
 require('dotenv').config();
+// server.js
 const express = require('express');
+const cors = require('cors');
 const path = require('path');
 const fs = require('fs').promises;
-const cors = require('cors');
-const { 
-    initializeDatabase, 
-    getAllChecklists, 
-    getChecklist, 
-    incrementDownloads, 
-    getStats,
-    searchChecklists,
-    getCategories,
-    getChecklistsByCategory
-} = require('./database');
-
-// Try to load markdown-pdf for on-demand conversion
-let markdownpdf;
-try {
-    markdownpdf = require('markdown-pdf');
-} catch (e) {
-    console.log('Note: markdown-pdf not installed. PDF generation disabled.');
-}
+const markdownPdf = require('markdown-pdf');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Initialize database on startup
-initializeDatabase().then(() => {
-    console.log('Database initialized successfully');
-}).catch(err => {
-    console.error('Database initialization failed:', err);
-});
-
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.static('public'));
-app.use('/checklists', express.static(path.join(__dirname, 'checklists')));
+app.use(express.urlencoded({ extended: true }));
 
-// Admin routes
-const adminRoutes = require('./admin-routes');
-app.use('/api/admin', adminRoutes);
+// Database
+const { 
+    initializeDatabase, 
+    getAllChecklists, 
+    getChecklist, 
+    createChecklist,
+    incrementDownloads,
+    getStats,
+    getChecklistsByCategory,
+    getCategories
+} = require('./database');
 
-// Contribution routes (only add once!)
-const { router: contributionRoutes, createContributionsTable } = require('./contributions');
-app.use('/api/contributions', contributionRoutes);
-
-// Initialize contributions table
-createContributionsTable().then(() => {
-    console.log('Contributions table ready');
+// Initialize database on startup
+initializeDatabase().then(() => {
+    console.log('Database initialized');
 }).catch(err => {
-    console.error('Failed to create contributions table:', err);
+    console.error('Failed to initialize database:', err);
 });
 
-// Serve admin dashboard
-app.get('/admin', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+// Serve static files
+app.use(express.static('public'));
+
+// Serve uploaded checklists (PDFs and other files)
+app.use('/checklists', express.static(path.join(__dirname, 'checklists')));
+
+// Home page
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // API Routes
+
+// Get all checklists
 app.get('/api/checklists', async (req, res) => {
     try {
         const checklists = await getAllChecklists();
-        
-        // Transform database results to match frontend expectations
-        const formattedChecklists = checklists.map(checklist => ({
-            id: checklist.id,
-            title: checklist.title,
-            description: checklist.description,
-            icon: checklist.icon || '📋',
-            version: checklist.version,
-            lastUpdated: new Date(checklist.updated_at).toLocaleDateString(),
-            downloads: checklist.downloads,
-            contributors: checklist.contributors || 1,
-            formats: checklist.formats ? checklist.formats.split(',').reduce((acc, format) => {
-                acc[format] = true;
-                return acc;
-            }, {}) : { pdf: true, markdown: true, excel: true },
-            features: [] // Will be loaded when viewing individual checklist
-        }));
-        
-        res.json(formattedChecklists);
+        res.json(checklists);
     } catch (error) {
-        console.error('Error fetching checklists:', error);
-        res.status(500).json({ error: 'Failed to fetch checklists' });
+        res.status(500).json({ error: error.message });
     }
 });
 
@@ -94,272 +63,227 @@ app.get('/api/checklists/:id', async (req, res) => {
         if (!checklist) {
             return res.status(404).json({ error: 'Checklist not found' });
         }
-        
-        res.json({
-            id: checklist.data.id,
-            title: checklist.data.title,
-            description: checklist.data.description,
-            icon: checklist.data.icon,
-            version: checklist.data.version,
-            features: checklist.features,
-            items: checklist.items,
-            formats: checklist.formats
-        });
+        res.json(checklist);
     } catch (error) {
-        console.error('Error fetching checklist:', error);
-        res.status(500).json({ error: 'Failed to fetch checklist' });
+        res.status(500).json({ error: error.message });
     }
 });
 
-// Search checklists
-app.get('/api/search', async (req, res) => {
+// Get checklists by category
+app.get('/api/categories/:category/checklists', async (req, res) => {
     try {
-        const query = req.query.q;
-        if (!query) {
-            return res.json([]);
-        }
-        
-        const results = await searchChecklists(query);
-        
-        // Format results to match frontend expectations
-        const formattedResults = results.map(checklist => ({
-            id: checklist.id,
-            title: checklist.title,
-            description: checklist.description,
-            icon: checklist.icon || '📋',
-            version: checklist.version,
-            lastUpdated: new Date(checklist.updated_at).toLocaleDateString(),
-            downloads: checklist.downloads,
-            contributors: checklist.contributors || 1,
-            formats: { pdf: true, markdown: true, excel: true }
-        }));
-        
-        res.json(formattedResults);
+        const checklists = await getChecklistsByCategory(req.params.category);
+        res.json(checklists);
     } catch (error) {
-        console.error('Error searching checklists:', error);
-        res.status(500).json({ error: 'Search failed' });
+        res.status(500).json({ error: error.message });
     }
 });
 
-// Stats endpoint
-app.get('/api/stats', async (req, res) => {
-    try {
-        const stats = await getStats();
-        res.json(stats);
-    } catch (error) {
-        console.error('Error fetching stats:', error);
-        res.json({
-            totalChecklists: 0,
-            totalDownloads: 0,
-            totalContributors: 0,
-            updateFrequency: 'Unknown'
-        });
-    }
-});
-
-// Get categories
+// Get all categories
 app.get('/api/categories', async (req, res) => {
     try {
         const categories = await getCategories();
         res.json(categories);
     } catch (error) {
-        console.error('Error fetching categories:', error);
-        res.json([]);
+        res.status(500).json({ error: error.message });
     }
 });
 
-// Get checklists by category
-app.get('/api/checklists/category/:category', async (req, res) => {
-    try {
-        const checklists = await getChecklistsByCategory(req.params.category);
-        
-        // Format the response
-        const formattedChecklists = checklists.map(checklist => ({
-            id: checklist.id,
-            title: checklist.title,
-            description: checklist.description,
-            icon: checklist.icon || '📋',
-            version: checklist.version,
-            lastUpdated: new Date(checklist.updated_at).toLocaleDateString(),
-            downloads: checklist.downloads,
-            contributors: checklist.contributors || 1,
-            formats: checklist.formats ? checklist.formats.split(',').reduce((acc, format) => {
-                acc[format] = true;
-                return acc;
-            }, {}) : { pdf: true, markdown: true, excel: true }
-        }));
-        
-        res.json(formattedChecklists);
-    } catch (error) {
-        console.error('Error fetching checklists by category:', error);
-        res.json([]);
-    }
-});
-
-// Download endpoint
-app.get('/api/download/:id/:format', async (req, res) => {
+// Download checklist
+app.get('/api/checklists/:id/download/:format', async (req, res) => {
     const { id, format } = req.params;
-    const checklistId = parseInt(id);
     
     try {
-        // Get checklist from database
-        const checklist = await getChecklist(checklistId);
+        const checklist = await getChecklist(id);
+        
         if (!checklist || !checklist.data) {
             return res.status(404).json({ error: 'Checklist not found' });
         }
         
-        // Log download
-        const ipAddress = req.ip || req.connection.remoteAddress;
-        const userAgent = req.get('user-agent');
-        await incrementDownloads(checklistId, format, ipAddress, userAgent);
+        const title = checklist.data.title;
+        const content = checklist.data.content;
         
-        // Generate filename
-        // Change 2:Remove the version number
-        const filename = `${checklist.data.title.toLowerCase().replace(/\s+/g, '-')}.${format}`;
-        // const filename = `${checklist.data.title.toLowerCase().replace(/\s+/g, '-')}-v${checklist.data.version}.${format}`;
-        const filePath = path.join(__dirname, 'checklists', filename);
-        
-        try {
-            // Check if file exists
-            await fs.access(filePath);
-            
-            // Set appropriate headers
-            res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-            
-            // Set content type based on format
-            const contentTypes = {
-                pdf: 'application/pdf',
-                markdown: 'text/markdown',
-                md: 'text/markdown',
-                excel: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                word: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                csv: 'text/csv',
-                fig: 'application/octet-stream'
-            };
-            
-            const ext = path.extname(filename).slice(1);
-            res.setHeader('Content-Type', contentTypes[ext] || 'application/octet-stream');
-            
-            // Send file
-            res.sendFile(filePath);
-            
-        } catch (error) {
-            console.error('File not found:', filePath);
-            
-            // Try to generate PDF from markdown if it's a PDF request
-            if (format.toLowerCase() === 'pdf' && markdownpdf) {
-                const mdFilename = filename.replace('.pdf', '.md');
-                const mdPath = path.join(__dirname, 'checklists', mdFilename);
+        // Check if this is a PDF upload
+        if (format === 'pdf' && content) {
+            // Check for base64 encoded PDF (production)
+            if (content.startsWith('PDF_BASE64:')) {
+                const parts = content.split(':');
+                const filename = parts[1];
+                const base64Data = parts[2];
                 
+                console.log('Serving base64 PDF:', filename);
+                
+                // Log download
+                const ipAddress = req.ip || req.connection.remoteAddress;
+                const userAgent = req.get('User-Agent');
+                await incrementDownloads(id, format, ipAddress, userAgent);
+                
+                // Convert base64 to buffer
+                const pdfBuffer = Buffer.from(base64Data, 'base64');
+                
+                // Set headers and send
+                res.setHeader('Content-Type', 'application/pdf');
+                res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+                return res.send(pdfBuffer);
+            }
+            // Check for file-based PDF (local development)
+            else if (content.startsWith('PDF File:')) {
+                // Extract filename from content
+                const pdfFilename = content.replace('PDF File: ', '').trim();
+                const pdfPath = path.join(__dirname, 'checklists', pdfFilename);
+                
+                // Check if PDF file exists
                 try {
-                    await fs.access(mdPath);
-                    console.log('Generating PDF from markdown...');
+                    await fs.access(pdfPath);
                     
-                    // Generate PDF on the fly
-                    const pdfPath = filePath;
-                    await new Promise((resolve, reject) => {
-                        markdownpdf()
-                            .from(mdPath)
-                            .to(pdfPath, function (err) {
-                                if (err) reject(err);
-                                else resolve();
-                            });
-                    });
+                    // Log download
+                    const ipAddress = req.ip || req.connection.remoteAddress;
+                    const userAgent = req.get('User-Agent');
+                    await incrementDownloads(id, format, ipAddress, userAgent);
                     
-                    // Now send the generated PDF
-                    res.sendFile(pdfPath);
-                    return;
-                } catch (mdError) {
-                    console.error('Markdown file not found or PDF generation failed');
+                    // Set proper headers for PDF download
+                    res.setHeader('Content-Type', 'application/pdf');
+                    res.setHeader('Content-Disposition', `attachment; filename="${path.basename(pdfFilename)}"`);
+                    
+                    // Send the actual PDF file
+                    return res.sendFile(pdfPath);
+                } catch (err) {
+                    console.error('PDF file not found:', pdfPath);
+                    // Fall back to generating PDF from markdown
                 }
             }
+        }
+        
+        // Log download for generated files
+        const ipAddress = req.ip || req.connection.remoteAddress;
+        const userAgent = req.get('User-Agent');
+        await incrementDownloads(id, format, ipAddress, userAgent);
+        
+        // For non-PDF or when PDF file doesn't exist, generate from markdown
+        if (format === 'pdf') {
+            const markdownContent = generateMarkdown(checklist);
             
-            // If all else fails, generate content from database
-            const content = await generateChecklistFromDB(checklist, format);
-            res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-            res.setHeader('Content-Type', 'text/plain');
-            res.send(content);
+            markdownPdf().from.string(markdownContent).to.buffer((err, buffer) => {
+                if (err) {
+                    console.error('PDF generation error:', err);
+                    res.status(500).json({ error: 'Failed to generate PDF' });
+                    return;
+                }
+                
+                res.setHeader('Content-Type', 'application/pdf');
+                res.setHeader('Content-Disposition', `attachment; filename="${title.toLowerCase().replace(/\s+/g, '-')}-checklist.pdf"`);
+                res.send(buffer);
+            });
+        } else if (format === 'markdown') {
+            const markdownContent = generateMarkdown(checklist);
+            res.setHeader('Content-Type', 'text/markdown');
+            res.setHeader('Content-Disposition', `attachment; filename="${title.toLowerCase().replace(/\s+/g, '-')}-checklist.md"`);
+            res.send(markdownContent);
+        } else if (format === 'excel') {
+            // Implement Excel generation here
+            res.status(501).json({ error: 'Excel format not yet implemented' });
+        } else {
+            res.status(400).json({ error: 'Invalid format' });
         }
     } catch (error) {
         console.error('Download error:', error);
-        res.status(500).json({ error: 'Download failed' });
+        res.status(500).json({ error: 'Failed to download checklist' });
     }
 });
 
-// Generate checklist content from database
-async function generateChecklistFromDB(checklist, format) {
+// Get statistics
+app.get('/api/stats', async (req, res) => {
+    try {
+        const stats = await getStats();
+        res.json(stats);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Admin routes
+const adminRoutes = require('./admin-routes');
+app.use('/api/admin', adminRoutes);
+
+// Contribution routes
+const { router: contributionRoutes, createContributionsTable } = require('./contributions');
+app.use('/api/contributions', contributionRoutes);
+
+// Initialize contributions table
+createContributionsTable().then(() => {
+    console.log('Contributions table ready');
+}).catch(err => {
+    console.error('Failed to create contributions table:', err);
+});
+
+// Admin page
+app.get('/admin', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+});
+
+// Helper function to generate markdown from checklist data
+function generateMarkdown(checklist) {
     const { data, features, items } = checklist;
+    let markdown = `# ${data.title}\n\n`;
+    markdown += `${data.description}\n\n`;
+    markdown += `**Version:** ${data.version || '1.0'}\n`;
+    markdown += `**Category:** ${data.category || 'General'}\n\n`;
     
-    let content = `# ${data.title}\n\n`;
-    content += `${data.description}\n\n`;
-    content += `Version: ${data.version}\n\n`;
-    
-    // Add disclaimer
-    content += `## ⚠️ IMPORTANT DISCLAIMER\n\n`;
-    content += `This checklist is for informational purposes only and does not constitute professional advice. `;
-    content += `Laws and regulations vary by location. Always consult with qualified professionals for your specific situation.\n\n`;
-    
-    // Add features
     if (features && features.length > 0) {
-        content += `## What's Included:\n\n`;
+        markdown += `## Features\n\n`;
         features.forEach(feature => {
-            content += `- ${feature}\n`;
+            markdown += `- ${feature}\n`;
         });
-        content += '\n';
+        markdown += '\n';
     }
     
-    // Add checklist items by phase
     if (items && items.length > 0) {
-        const phases = {};
+        let currentPhase = '';
         items.forEach(item => {
-            if (!phases[item.phase]) {
-                phases[item.phase] = [];
+            if (item.phase !== currentPhase) {
+                currentPhase = item.phase;
+                markdown += `## ${currentPhase}\n\n`;
             }
-            phases[item.phase].push(item);
-        });
-        
-        Object.entries(phases).forEach(([phase, phaseItems]) => {
-            content += `## ${phase}\n\n`;
-            phaseItems.forEach(item => {
-                const prefix = item.is_required ? '☐' : '○';
-                content += `${prefix} ${item.item_text}\n`;
-            });
-            content += '\n';
+            markdown += `- [${item.is_required ? 'x' : ' '}] ${item.item_text}\n`;
         });
     }
     
-    // Add footer
-    content += `---\n\n`;
-    content += `Made with ❤️ by the OpenChecklist Community\n`;
-    content += `Licensed under CC BY 4.0 - Free to use, modify, and share\n`;
+    if (data.content && !data.content.startsWith('PDF File:')) {
+        markdown += `\n## Additional Information\n\n${data.content}\n`;
+    }
     
-    return content;
+    return markdown;
 }
+
+// Temporary debug routes (remove in production)
+app.get('/api/debug/db', async (req, res) => {
+    try {
+        const stats = await getStats();
+        const checklists = await getAllChecklists();
+        res.json({
+            database: process.env.DATABASE_URL ? 'PostgreSQL' : 'SQLite',
+            stats,
+            checklistCount: checklists.length,
+            firstChecklist: checklists[0] || null
+        });
+    } catch (error) {
+        res.json({ error: error.message, stack: error.stack });
+    }
+});
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-    console.error(err.stack);
+    console.error('Error:', err.stack);
     res.status(500).json({ error: 'Something went wrong!' });
+});
+
+// 404 handler
+app.use((req, res) => {
+    res.status(404).json({ error: 'Route not found' });
 });
 
 // Start server
 app.listen(PORT, () => {
-    console.log(`OpenChecklist server running on port ${PORT}`);
-    console.log(`Visit http://localhost:${PORT} to view the site`);
-    console.log(`Admin panel: http://localhost:${PORT}/admin`);
+    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Admin panel at http://localhost:${PORT}/admin`);
 });
-
-// Create necessary directories on startup
-const setupDirectories = async () => {
-    try {
-        await fs.mkdir(path.join(__dirname, 'checklists'), { recursive: true });
-        await fs.mkdir(path.join(__dirname, 'public'), { recursive: true });
-        console.log('Directories verified/created successfully');
-    } catch (error) {
-        console.error('Error creating directories:', error);
-    }
-};
-
-setupDirectories();
