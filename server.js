@@ -1,4 +1,5 @@
 require('dotenv').config();
+// server.js
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -6,7 +7,7 @@ const fs = require('fs').promises;
 const markdownPdf = require('markdown-pdf');
 
 const app = express();
-const PORT = process.env.PORT || 10000;
+const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
@@ -102,6 +103,10 @@ app.get('/api/checklists/:id/download/:format', async (req, res) => {
         const title = checklist.data.title;
         const content = checklist.data.content;
         
+        // Log the checklist data for debugging
+        console.log('Download request for checklist:', id, 'format:', format);
+        console.log('Content type:', content ? content.substring(0, 50) + '...' : 'No content');
+        
         // Check if this is a PDF upload
         if (format === 'pdf' && content) {
             // Check for base64 encoded PDF (production)
@@ -123,6 +128,7 @@ app.get('/api/checklists/:id/download/:format', async (req, res) => {
                 // Set headers and send
                 res.setHeader('Content-Type', 'application/pdf');
                 res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+                res.setHeader('Content-Length', pdfBuffer.length);
                 return res.send(pdfBuffer);
             }
             // Check for file-based PDF (local development)
@@ -130,6 +136,8 @@ app.get('/api/checklists/:id/download/:format', async (req, res) => {
                 // Extract filename from content
                 const pdfFilename = content.replace('PDF File: ', '').trim();
                 const pdfPath = path.join(__dirname, 'checklists', pdfFilename);
+                
+                console.log('Looking for PDF file at:', pdfPath);
                 
                 // Check if PDF file exists
                 try {
@@ -148,6 +156,7 @@ app.get('/api/checklists/:id/download/:format', async (req, res) => {
                     return res.sendFile(pdfPath);
                 } catch (err) {
                     console.error('PDF file not found:', pdfPath);
+                    console.error('Error:', err);
                     // Fall back to generating PDF from markdown
                 }
             }
@@ -268,6 +277,15 @@ app.get('/api/debug/db', async (req, res) => {
     } catch (error) {
         res.json({ error: error.message, stack: error.stack });
     }
+});
+
+// Test endpoint to verify deployment
+app.get('/api/version', (req, res) => {
+    res.json({ 
+        version: '2.0',
+        message: 'API is working correctly',
+        timestamp: new Date().toISOString()
+    });
 });
 
 // Temporary debug endpoint
