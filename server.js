@@ -1,4 +1,3 @@
-require('dotenv').config();
 // server.js
 const express = require('express');
 const cors = require('cors');
@@ -286,6 +285,36 @@ app.get('/api/version', (req, res) => {
         message: 'API is working correctly',
         timestamp: new Date().toISOString()
     });
+});
+
+// Debug endpoint to check checklist content
+app.get('/api/debug/checklist/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await getChecklist(id);
+        
+        if (!result) {
+            return res.status(404).json({ error: 'Checklist not found' });
+        }
+        
+        const contentInfo = result.data.content ? {
+            type: result.data.content.startsWith('PDF_BASE64:') ? 'Base64 PDF' : 
+                  result.data.content.startsWith('PDF File:') ? 'File Reference' : 'Other',
+            length: result.data.content.length,
+            preview: result.data.content.substring(0, 100) + '...'
+        } : { type: 'No content' };
+        
+        res.json({
+            id: result.data.id,
+            title: result.data.title,
+            content: contentInfo,
+            features: result.features,
+            items: result.items,
+            hasContent: !!result.data.content
+        });
+    } catch (error) {
+        res.json({ error: error.message });
+    }
 });
 
 // Temporary debug endpoint
