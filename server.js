@@ -9,8 +9,14 @@ const markdownPdf = require('markdown-pdf');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
-app.use(cors());
+// CORS configuration
+app.use(cors({
+    origin: true, // Allow all origins in development
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    exposedHeaders: ['Content-Disposition', 'Content-Length', 'Content-Type']
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -112,8 +118,11 @@ app.get('/api/checklists/:id/download/:format', async (req, res) => {
             // Check for base64 encoded PDF (production)
             if (content.startsWith('PDF_BASE64:')) {
                 const parts = content.split(':');
-                const filename = parts[1];
+                const originalFilename = parts[1];
                 const base64Data = parts[2];
+                
+                // Sanitize filename
+                const filename = originalFilename.replace(/[^a-zA-Z0-9.-_]/g, '_');
                 
                 console.log('Serving base64 PDF:', filename);
                 console.log('Base64 length:', base64Data.length);
@@ -133,13 +142,19 @@ app.get('/api/checklists/:id/download/:format', async (req, res) => {
                     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
                     res.setHeader('Content-Length', pdfBuffer.length);
                     
+                    // Alternative: Force download by setting additional headers
+                    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+                    res.setHeader('Pragma', 'no-cache');
+                    res.setHeader('Expires', '0');
+                    res.setHeader('Content-Transfer-Encoding', 'binary');
+                    
                     console.log('Sending PDF response with headers:', {
                         'Content-Type': 'application/pdf',
                         'Content-Disposition': `attachment; filename="${filename}"`,
                         'Content-Length': pdfBuffer.length
                     });
                     
-                    return res.send(pdfBuffer);
+                    return res.status(200).end(pdfBuffer);
                 } catch (error) {
                     console.error('Error processing base64 PDF:', error);
                     return res.status(500).json({ error: 'Failed to process PDF' });
@@ -300,6 +315,46 @@ app.get('/api/version', (req, res) => {
         message: 'API is working correctly',
         timestamp: new Date().toISOString()
     });
+});
+
+// Test endpoint to verify PDF data
+app.get('/api/test-download/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await getChecklist(id);
+        
+        if (!result || !result.data.content) {
+            return res.status(404).json({ error: 'No content found' });
+        }
+        
+        const content = result.data.content;
+        
+        if (content.startsWith('PDF_BASE64:')) {
+            const parts = content.split(':');
+            const filename = parts[1];
+            const base64Data = parts[2];
+            
+            // Test if base64 is valid
+            try {
+                const buffer = Buffer.from(base64Data, 'base64');
+                const isValidPDF = buffer.slice(0, 5).toString() === '%PDF-';
+                
+                res.json({
+                    filename,
+                    base64Length: base64Data.length,
+                    bufferSize: buffer.length,
+                    isValidPDF,
+                    firstBytes: buffer.slice(0, 10).toString('hex')
+                });
+            } catch (error) {
+                res.json({ error: 'Invalid base64 data', details: error.message });
+            }
+        } else {
+            res.json({ error: 'Content is not base64 PDF' });
+        }
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 
 // Debug endpoint to check checklist content
