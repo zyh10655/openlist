@@ -276,8 +276,96 @@ async function updateChecklist(id, data) {
 }
 
 // Delete checklist
+// Replace your deleteChecklist function in database.js with this:
+
 async function deleteChecklist(id) {
-    await pool.query('DELETE FROM checklists WHERE id = $1', [id]);
+    const client = await pool.connect();
+    
+    try {
+        await client.query('BEGIN');
+        
+        console.log(`Starting deletion of checklist ${id}`);
+        
+        // Delete all related records FIRST (child tables)
+        // 1. Delete download records
+        const downloadResult = await client.query(
+            'DELETE FROM downloads WHERE checklist_id = $1',
+            [id]
+        );
+        console.log(`Deleted ${downloadResult.rowCount} download records`);
+        
+        // 2. Delete checklist items (if table exists)
+        try {
+            const itemsResult = await client.query(
+                'DELETE FROM checklist_items WHERE checklist_id = $1',
+                [id]
+            );
+            console.log(`Deleted ${itemsResult.rowCount} checklist items`);
+        } catch (err) {
+            if (err.code !== '42P01') { // Table doesn't exist error
+                throw err;
+            }
+            console.log('checklist_items table does not exist, skipping...');
+        }
+        
+        // 3. Delete features (if table exists)
+        try {
+            const featuresResult = await client.query(
+                'DELETE FROM features WHERE checklist_id = $1',
+                [id]
+            );
+            console.log(`Deleted ${featuresResult.rowCount} features`);
+        } catch (err) {
+            if (err.code !== '42P01') { // Table doesn't exist error
+                throw err;
+            }
+            console.log('features table does not exist, skipping...');
+        }
+        
+        // 4. Delete any other related tables that might exist
+        try {
+            const formatsResult = await client.query(
+                'DELETE FROM formats WHERE checklist_id = $1',
+                [id]
+            );
+            console.log(`Deleted ${formatsResult.rowCount} formats`);
+        } catch (err) {
+            if (err.code !== '42P01') { // Table doesn't exist error
+                throw err;
+            }
+            console.log('formats table does not exist, skipping...');
+        }
+        
+        // 5. Finally, delete the checklist itself (parent table)
+        const checklistResult = await client.query(
+            'DELETE FROM checklists WHERE id = $1',
+            [id]
+        );
+        
+        if (checklistResult.rowCount === 0) {
+            throw new Error(`Checklist with id ${id} not found`);
+        }
+        
+        console.log(`Successfully deleted checklist ${id}`);
+        
+        await client.query('COMMIT');
+        
+        return { 
+            success: true, 
+            message: `Checklist ${id} and all related data deleted successfully`,
+            deletedRows: {
+                checklists: checklistResult.rowCount,
+                downloads: downloadResult.rowCount
+            }
+        };
+        
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('Error in deleteChecklist:', error);
+        throw error;
+    } finally {
+        client.release();
+    }
 }
 
 // Increment download count
