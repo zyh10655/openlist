@@ -20,6 +20,13 @@ const {
     pool
 } = require('./database');
 
+let markdownpdf;
+try {
+    markdownpdf = require('markdown-pdf');
+} catch (e) {
+    console.log('Note: markdown-pdf not installed. PDF generation disabled.');
+}
+
 const app = express();
 const PORT = process.env.PORT || 10000;
 
@@ -43,7 +50,7 @@ app.get('/api/checklists', async (req, res) => {
         const checklists = await getAllChecklists();
         console.log('API: Fetching all checklists, count:', checklists.length);
         
-        // Transform database results to match frontend expectations
+        // Transform  results to match frontend expectations
         const formattedChecklists = checklists.map(checklist => ({
             id: checklist.id,
             title: checklist.title,
@@ -229,7 +236,12 @@ app.get('/api/stats', async (req, res) => {
         res.json(stats);
     } catch (error) {
         console.error('Error fetching stats:', error);
-        res.status(500).json({ error: 'Failed to fetch stats' });
+        res.json({
+            totalChecklists: 0,
+            totalDownloads: 0,
+            totalContributors: 0,
+            updateFrequency: 'Unknown'
+        });
     }
 });
 
@@ -293,7 +305,7 @@ app.get('/api/debug', async (req, res) => {
         const categories = await getCategories();
         
         res.json({
-            database: 'PostgreSQL',
+            : 'PostgreSQL',
             stats,
             checklistCount: checklists.length,
             categories,
@@ -308,7 +320,7 @@ app.get('/api/debug', async (req, res) => {
         res.json({ 
             error: error.message, 
             stack: error.stack,
-            database: 'Error connecting'
+            : 'Error connecting'
         });
     }
 });
@@ -443,5 +455,18 @@ app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });
+
+// Create necessary directories on startup
+const setupDirectories = async () => {
+    try {
+        await fs.mkdir(path.join(__dirname, 'checklists'), { recursive: true });
+        await fs.mkdir(path.join(__dirname, 'public'), { recursive: true });
+        console.log('Directories verified/created successfully');
+    } catch (error) {
+        console.error('Error creating directories:', error);
+    }
+};
+
+setupDirectories();
 
 module.exports = app;
