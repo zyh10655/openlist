@@ -213,11 +213,74 @@
             background: var(--bg-light);
             padding: 1.5rem;
             text-align: center;
+            position: relative;
         }
 
         .checklist-icon {
             font-size: 3rem;
             margin-bottom: 0.5rem;
+        }
+
+        /* File Type Badges */
+        .file-type-badge {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            z-index: 2;
+        }
+
+        .zip-badge {
+            background: linear-gradient(135deg, #9c27b0, #673ab7);
+            color: white;
+        }
+
+        .pdf-badge {
+            background: linear-gradient(135deg, #2196f3, #1976d2);
+            color: white;
+        }
+
+        /* File Info Boxes */
+        .file-info-box {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+        }
+
+        .zip-info {
+            background: linear-gradient(135deg, #f3e5f5, #e1bee7);
+            border-left: 4px solid #9c27b0;
+        }
+
+        .pdf-info {
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+            border-left: 4px solid #2196f3;
+        }
+
+        .file-icon {
+            font-size: 3rem;
+            line-height: 1;
+        }
+
+        .file-details h4 {
+            margin: 0 0 0.5rem 0;
+            color: var(--text-dark);
+        }
+
+        .file-details p {
+            margin: 0 0 0.25rem 0;
+            color: var(--text-dark);
+        }
+
+        .file-details small {
+            color: var(--text-light);
+            font-style: italic;
         }
 
         .checklist-info {
@@ -289,6 +352,14 @@
             cursor: not-allowed;
         }
 
+        .zip-download {
+            background: linear-gradient(135deg, #9c27b0, #673ab7) !important;
+        }
+
+        .pdf-download {
+            background: linear-gradient(135deg, #2196f3, #1976d2) !important;
+        }
+
         /* Format Buttons */
         .format-buttons {
             display: flex;
@@ -311,6 +382,18 @@
             background: var(--primary-color);
             color: white;
             border-color: var(--primary-color);
+        }
+
+        .format-btn.zip-btn {
+            background: linear-gradient(135deg, #9c27b0, #673ab7);
+            color: white;
+            border: none;
+        }
+
+        .format-btn.pdf-btn {
+            background: linear-gradient(135deg, #2196f3, #1976d2);
+            color: white;
+            border: none;
         }
 
         /* Community Section */
@@ -713,48 +796,142 @@
             }
         }
 
-        // Render checklists
+        // Render checklists - UPDATED FOR ZIP SUPPORT
         function renderChecklists() {
             const grid = document.getElementById('checklistsGrid');
-            grid.innerHTML = checklists.map(checklist => `
-                <div class="checklist-card">
-                    <div class="checklist-header">
-                        <div class="checklist-icon">${checklist.icon}</div>
-                    </div>
-                    <div class="checklist-info">
-                        <h3 class="checklist-title">${checklist.title}</h3>
-                        <p class="checklist-description">${checklist.description}</p>
-                        <div class="checklist-meta">
-                            <span>v${checklist.version}</span>
-                            <span>Updated ${checklist.lastUpdated}</span>
-                        </div>
-                        <div class="checklist-stats">
-                            <span class="stat-badge">
-                                <span>⬇️</span> ${checklist.downloads.toLocaleString()}
-                            </span>
-                            <span class="stat-badge">
-                                <span>👥</span> ${checklist.contributors}
-                            </span>
-                        </div>
-                        <div class="checklist-actions">
-                            <button onclick="viewChecklist(${checklist.id})">View Details</button>
-                            <button class="btn-download" onclick="quickDownload(${checklist.id}, 'pdf')">
-                                Download PDF
+            grid.innerHTML = checklists.map(checklist => {
+                
+                // Determine file type and display info
+                let fileTypeInfo = '';
+                let downloadButton = '';
+                
+                if (checklist.content) {
+                    if (checklist.content.startsWith('ZIP_BASE64:') || checklist.content.startsWith('ZIP File:')) {
+                        fileTypeInfo = `
+                            <div class="file-type-badge zip-badge">
+                                📦 ZIP Package
+                            </div>
+                        `;
+                        downloadButton = `
+                            <button class="btn-download zip-download" onclick="quickDownload(${checklist.id}, 'zip')">
+                                📦 Download ZIP Package
                             </button>
+                        `;
+                    } else if (checklist.content.startsWith('PDF_BASE64:') || checklist.content.startsWith('PDF File:')) {
+                        fileTypeInfo = `
+                            <div class="file-type-badge pdf-badge">
+                                📄 PDF Document
+                            </div>
+                        `;
+                        downloadButton = `
+                            <button class="btn-download pdf-download" onclick="quickDownload(${checklist.id}, 'pdf')">
+                                📄 Download PDF
+                            </button>
+                        `;
+                    } else {
+                        // Regular markdown checklist
+                        downloadButton = `
+                            <button class="btn-download" onclick="quickDownload(${checklist.id}, 'pdf')">
+                                📋 Download PDF
+                            </button>
+                        `;
+                    }
+                } else {
+                    downloadButton = `
+                        <button class="btn-download" onclick="quickDownload(${checklist.id}, 'pdf')">
+                            📋 Download PDF
+                        </button>
+                    `;
+                }
+                
+                return `
+                    <div class="checklist-card">
+                        <div class="checklist-header">
+                            <div class="checklist-icon">${checklist.icon}</div>
+                            ${fileTypeInfo}
+                        </div>
+                        <div class="checklist-info">
+                            <h3 class="checklist-title">${checklist.title}</h3>
+                            <p class="checklist-description">${checklist.description}</p>
+                            <div class="checklist-meta">
+                                <span>v${checklist.version}</span>
+                                <span>Updated ${checklist.lastUpdated}</span>
+                            </div>
+                            <div class="checklist-stats">
+                                <span class="stat-badge">
+                                    <span>⬇️</span> ${checklist.downloads.toLocaleString()}
+                                </span>
+                                <span class="stat-badge">
+                                    <span>👥</span> ${checklist.contributors}
+                                </span>
+                            </div>
+                            <div class="checklist-actions">
+                                <button onclick="viewChecklist(${checklist.id})">View Details</button>
+                                ${downloadButton}
+                            </div>
                         </div>
                     </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
-        // View checklist details
+        // View checklist details - UPDATED FOR ZIP SUPPORT
         async function viewChecklist(checklistId) {
             const checklist = checklists.find(c => c.id === checklistId);
             const modalContent = document.getElementById('modalContent');
             
-            const formatButtons = Object.keys(checklist.formats).map(format => 
-                `<button class="format-btn" onclick="downloadChecklist(${checklist.id}, '${format}')">${format.toUpperCase()}</button>`
-            ).join('');
+            // Determine available formats based on content
+            let formatButtons = '';
+            let fileDescription = '';
+            
+            if (checklist.content) {
+                if (checklist.content.startsWith('ZIP_BASE64:') || checklist.content.startsWith('ZIP File:')) {
+                    // ZIP file checklist
+                    formatButtons = `
+                        <button class="format-btn zip-btn" onclick="downloadChecklist(${checklist.id}, 'zip')">
+                            📦 ZIP Package
+                        </button>
+                    `;
+                    fileDescription = `
+                        <div class="file-info-box zip-info">
+                            <div class="file-icon">📦</div>
+                            <div class="file-details">
+                                <h4>ZIP Package Download</h4>
+                                <p>Contains multiple files, templates, and resources for this checklist.</p>
+                                <small>Perfect for complex checklists with supporting materials.</small>
+                            </div>
+                        </div>
+                    `;
+                } else if (checklist.content.startsWith('PDF_BASE64:') || checklist.content.startsWith('PDF File:')) {
+                    // PDF file checklist
+                    formatButtons = `
+                        <button class="format-btn pdf-btn" onclick="downloadChecklist(${checklist.id}, 'pdf')">
+                            📄 PDF Document
+                        </button>
+                    `;
+                    fileDescription = `
+                        <div class="file-info-box pdf-info">
+                            <div class="file-icon">📄</div>
+                            <div class="file-details">
+                                <h4>PDF Document Download</h4>
+                                <p>Complete checklist in a single PDF document.</p>
+                                <small>Easy to view, print, and share.</small>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    // Regular markdown checklist
+                    formatButtons = `
+                        <button class="format-btn" onclick="downloadChecklist(${checklist.id}, 'pdf')">PDF</button>
+                        <button class="format-btn" onclick="downloadChecklist(${checklist.id}, 'markdown')">Markdown</button>
+                    `;
+                }
+            } else {
+                formatButtons = `
+                    <button class="format-btn" onclick="downloadChecklist(${checklist.id}, 'pdf')">PDF</button>
+                    <button class="format-btn" onclick="downloadChecklist(${checklist.id}, 'markdown')">Markdown</button>
+                `;
+            }
             
             modalContent.innerHTML = `
                 <div style="text-align: center; margin-bottom: 2rem;">
@@ -767,19 +944,24 @@
                     </div>
                 </div>
                 
+                ${fileDescription}
+                
                 <div style="margin-bottom: 2rem;">
                     <h3 style="margin-bottom: 1rem;">What's Included:</h3>
                     <ul style="list-style: none; padding: 0;">
-                        ${checklist.features.map(feature => `
-                            <li style="padding: 0.5rem 0; color: var(--text-light);">
-                                <span style="color: var(--primary-color); font-weight: bold;">✓</span> ${feature}
-                            </li>
-                        `).join('')}
+                        ${checklist.features && checklist.features.length > 0 ? 
+                            checklist.features.map(feature => `
+                                <li style="padding: 0.5rem 0; color: var(--text-light);">
+                                    <span style="color: var(--primary-color); font-weight: bold;">✓</span> ${feature}
+                                </li>
+                            `).join('') : 
+                            '<li style="padding: 0.5rem 0; color: var(--text-light);"><span style="color: var(--primary-color); font-weight: bold;">✓</span> Comprehensive checklist included</li>'
+                        }
                     </ul>
                 </div>
                 
                 <div style="background: var(--bg-light); padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem;">
-                    <h3 style="margin-bottom: 1rem;">Download in Your Preferred Format:</h3>
+                    <h3 style="margin-bottom: 1rem;">Download:</h3>
                     <div class="format-buttons">
                         ${formatButtons}
                     </div>
@@ -800,7 +982,7 @@
             await downloadChecklist(checklistId, format);
         }
 
-        // Download checklist
+        // Download checklist - UPDATED FOR ZIP SUPPORT
         async function downloadChecklist(checklistId, format) {
             const checklist = checklists.find(c => c.id === checklistId);
             const downloadBtn = event.target;
@@ -813,11 +995,22 @@
                 
                 // Create download link
                 const downloadUrl = `${API_BASE}/checklists/${checklistId}/download?format=${format}`;
-                //window.location.href = `/api/checklists/${checklistId}/download?format=${format}`;
+                
                 // Create temporary link and trigger download
                 const link = document.createElement('a');
                 link.href = downloadUrl;
-                link.download = `${checklist.title.toLowerCase().replace(/\s+/g, '-')}-v${checklist.version}.${format}`;
+                
+                // Set filename based on format
+                let filename = `${checklist.title.toLowerCase().replace(/\s+/g, '-')}-v${checklist.version}`;
+                if (format === 'zip') {
+                    filename += '.zip';
+                } else if (format === 'pdf') {
+                    filename += '.pdf';
+                } else if (format === 'markdown') {
+                    filename += '.md';
+                }
+                
+                link.download = filename;
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
@@ -825,7 +1018,15 @@
                 // Update UI
                 checklist.downloads += 1;
                 renderChecklists();
-                showToast(`Downloading ${checklist.title} in ${format.toUpperCase()} format`);
+                
+                // Show success message based on format
+                if (format === 'zip') {
+                    showToast(`Downloading ${checklist.title} ZIP package`);
+                } else if (format === 'pdf') {
+                    showToast(`Downloading ${checklist.title} as PDF`);
+                } else {
+                    showToast(`Downloading ${checklist.title} as ${format.toUpperCase()}`);
+                }
                 
                 // Close modal if open
                 if (document.getElementById('checklistModal').style.display === 'block') {
