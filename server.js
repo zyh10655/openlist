@@ -386,7 +386,21 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Admin routes
 const adminRoutes = require('./admin-routes');
 app.use('/admin', adminRoutes);
+// Contribution routes (only add once!)
 
+const { router: contributionRoutes, createContributionsTable } = require('./contributions');
+app.use('/api/contributions', contributionRoutes);
+
+// Initialize contributions table
+createContributionsTable().then(() => {
+    console.log('Contributions table ready');
+}).catch(err => {
+    console.error('Failed to create contributions table:', err);
+});
+// Serve admin dashboard
+app.get('/admin', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+});
 // Catch-all route - MUST BE LAST
 app.get('*', (req, res) => {
     if (req.path.startsWith('/api/')) {
