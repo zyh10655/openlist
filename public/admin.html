@@ -345,7 +345,7 @@
     </div>
 
     <script>
-        let adminKey = '';
+        let adminKey = 'admin123';
         
         function setAdminKey() {
             adminKey = document.getElementById('adminKey').value;
@@ -380,7 +380,7 @@
                 const stats = await apiCall('/api/stats');
                 document.getElementById('totalChecklists').textContent = stats.totalChecklists;
                 document.getElementById('totalDownloads').textContent = stats.totalDownloads.toLocaleString();
-                document.getElementById('uniqueUsers').textContent = stats.uniqueUsers || '-';
+                document.getElementById('uniqueUsers').textContent = stats.totalContributors || '-';
                 document.getElementById('avgDownloads').textContent = 
                     Math.round(stats.totalDownloads / stats.totalChecklists) || '-';
                 
