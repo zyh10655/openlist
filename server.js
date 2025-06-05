@@ -75,8 +75,8 @@ app.get('/api/checklists/:id/download', async (req, res) => {
     
     console.log('Download endpoint hit - ID:', id, 'Format:', format);
     
-    if (!format || !['pdf', 'markdown', 'excel'].includes(format)) {
-        return res.status(400).json({ error: 'Invalid format. Use pdf, markdown, or excel.' });
+    if (!format || !['pdf', 'markdown', 'excel', 'zip'].includes(format)) {
+        return res.status(400).json({ error: 'Invalid format. Use pdf, markdown, excel, or zip.' });
     }
     
     try {
@@ -92,26 +92,22 @@ app.get('/api/checklists/:id/download', async (req, res) => {
         console.log('Download request for checklist:', id, 'format:', format);
         console.log('Has content:', !!content);
         
-        // Check if this is a PDF upload with stored content
+        // Handle PDF uploads with stored content
         if (format === 'pdf' && content && content.startsWith('PDF_BASE64:')) {
             const parts = content.split(':');
             const originalFilename = parts[1];
             const base64Data = parts[2];
             
-            // Sanitize filename
             const filename = originalFilename.replace(/[^a-zA-Z0-9.-_]/g, '_');
             
             console.log('Serving base64 PDF:', filename);
             
             try {
-                // Convert base64 to buffer
                 const pdfBuffer = Buffer.from(base64Data, 'base64');
                 console.log('PDF buffer size:', pdfBuffer.length);
                 
-                // Log download
                 await incrementDownloads(id, format, req.ip, req.get('User-Agent'));
                 
-                // Set headers and send
                 res.setHeader('Content-Type', 'application/pdf');
                 res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
                 res.setHeader('Content-Length', pdfBuffer.length);
@@ -123,10 +119,44 @@ app.get('/api/checklists/:id/download', async (req, res) => {
             }
         }
         
-        // Generate content from features and items
+        // Handle ZIP uploads with stored content  
+        if (format === 'zip' && content && content.startsWith('ZIP_BASE64:')) {
+            const parts = content.split(':');
+            const originalFilename = parts[1];
+            const base64Data = parts[2];
+            
+            const filename = originalFilename.replace(/[^a-zA-Z0-9.-_]/g, '_');
+            
+            console.log('Serving base64 ZIP:', filename);
+            
+            try {
+                const zipBuffer = Buffer.from(base64Data, 'base64');
+                console.log('ZIP buffer size:', zipBuffer.length);
+                
+                await incrementDownloads(id, format, req.ip, req.get('User-Agent'));
+                
+                res.setHeader('Content-Type', 'application/zip');
+                res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+                res.setHeader('Content-Length', zipBuffer.length);
+                
+                return res.send(zipBuffer);
+            } catch (error) {
+                console.error('Error processing base64 ZIP:', error);
+                return res.status(500).json({ error: 'Failed to process ZIP' });
+            }
+        }
+        
+        // Handle requests for ZIP format but no ZIP file exists
+        if (format === 'zip' && (!content || !content.startsWith('ZIP_BASE64:'))) {
+            return res.status(404).json({ 
+                error: 'ZIP file not available for this checklist',
+                suggestion: 'Try downloading as PDF or markdown instead'
+            });
+        }
+        
+        // Generate content from features and items (for markdown/pdf generation)
         console.log('Generating content from checklist data');
         
-        // Create markdown content
         let markdownContent = `# ${data.title}\n\n${data.description || 'No description provided.'}\n\n`;
         
         if (features && features.length > 0) {
@@ -140,7 +170,6 @@ app.get('/api/checklists/:id/download', async (req, res) => {
         if (items && items.length > 0) {
             markdownContent += `## Checklist Items\n\n`;
             
-            // Group items by phase
             const phases = {};
             items.forEach(item => {
                 const phase = item.phase || 'General';
@@ -190,7 +219,6 @@ app.get('/api/checklists/:id/download', async (req, res) => {
         res.status(500).json({ error: 'Failed to download checklist' });
     }
 });
-
 // Get single checklist details
 app.get('/api/checklists/:id', async (req, res) => {
     try {
