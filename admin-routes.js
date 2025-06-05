@@ -1,4 +1,4 @@
-// admin-routes.js
+// admin-routes.js - FIXED FOR POSTGRESQL
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
@@ -6,8 +6,11 @@ const path = require('path');
 const fs = require('fs').promises;
 const { 
     createChecklist, 
-    db,
-    getAllChecklists 
+    pool,  // ✅ Use pool instead of db
+    getAllChecklists,
+    getChecklist,
+    updateChecklist,
+    deleteChecklist
 } = require('./database');
 
 // Configure multer for file uploads
@@ -65,6 +68,7 @@ router.get('/checklists', adminAuth, async (req, res) => {
         const checklists = await getAllChecklists();
         res.json(checklists);
     } catch (error) {
+        console.error('Admin get checklists error:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -132,7 +136,7 @@ router.post('/checklists', adminAuth, upload.single('pdfFile'), async (req, res)
             content: checklistData.content?.substring(0, 50) + '...' // Log only first 50 chars
         });
         
-        // Create checklist in database
+        // Create checklist in database using the PostgreSQL function
         const checklistId = await createChecklist(checklistData);
         
         console.log('Checklist created with ID:', checklistId);
@@ -159,85 +163,55 @@ router.post('/checklists', adminAuth, upload.single('pdfFile'), async (req, res)
     }
 });
 
-// Update checklist
+// Update checklist - FIXED FOR POSTGRESQL
 router.put('/checklists/:id', adminAuth, async (req, res) => {
     const { id } = req.params;
     const updates = req.body;
     
     try {
-        await new Promise((resolve, reject) => {
-            const fields = Object.keys(updates).map(key => `${key} = ?`).join(', ');
-            const values = Object.values(updates);
-            values.push(id);
-            
-            db.run(
-                `UPDATE checklists SET ${fields}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-                values,
-                (err) => {
-                    if (err) reject(err);
-                    else resolve();
-                }
-            );
-        });
-        
+        // Use the existing updateChecklist function from database.js
+        await updateChecklist(id, updates);
         res.json({ message: 'Checklist updated successfully' });
     } catch (error) {
+        console.error('Error updating checklist:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
-// Delete checklist
+// Delete checklist - FIXED FOR POSTGRESQL
 router.delete('/checklists/:id', adminAuth, async (req, res) => {
     const { id } = req.params;
     
     try {
-        await new Promise((resolve, reject) => {
-            db.serialize(() => {
-                // Delete related data first
-                db.run('DELETE FROM checklist_items WHERE checklist_id = ?', [id]);
-                db.run('DELETE FROM features WHERE checklist_id = ?', [id]);
-                db.run('DELETE FROM formats WHERE checklist_id = ?', [id]);
-                db.run('DELETE FROM download_logs WHERE checklist_id = ?', [id]);
-                
-                // Delete checklist
-                db.run('DELETE FROM checklists WHERE id = ?', [id], (err) => {
-                    if (err) reject(err);
-                    else resolve();
-                });
-            });
-        });
-        
+        // Use the existing deleteChecklist function from database.js
+        await deleteChecklist(id);
         res.json({ message: 'Checklist deleted successfully' });
     } catch (error) {
+        console.error('Error deleting checklist:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
-// Add checklist item
+// Add checklist item - FIXED FOR POSTGRESQL
 router.post('/checklists/:id/items', adminAuth, async (req, res) => {
     const { id } = req.params;
     const { phase, text, order_index, is_required } = req.body;
     
     try {
-        await new Promise((resolve, reject) => {
-            db.run(
-                `INSERT INTO checklist_items (checklist_id, phase, item_text, order_index, is_required) 
-                 VALUES (?, ?, ?, ?, ?)`,
-                [id, phase, text, order_index, is_required ? 1 : 0],
-                (err) => {
-                    if (err) reject(err);
-                    else resolve();
-                }
-            );
-        });
+        await pool.query(
+            `INSERT INTO checklist_items (checklist_id, phase, item_text, item_order, is_required) 
+             VALUES ($1, $2, $3, $4, $5)`,
+            [id, phase, text, order_index || 0, is_required || false]
+        );
         
         res.json({ message: 'Item added successfully' });
     } catch (error) {
+        console.error('Error adding checklist item:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
-// Upload PDF for existing checklist
+// Upload PDF for existing checklist - FIXED FOR POSTGRESQL
 router.post('/checklists/:id/upload-pdf', adminAuth, upload.single('pdfFile'), async (req, res) => {
     const { id } = req.params;
     
@@ -246,23 +220,35 @@ router.post('/checklists/:id/upload-pdf', adminAuth, upload.single('pdfFile'), a
             return res.status(400).json({ error: 'No PDF file uploaded' });
         }
         
+        let content;
+        
+        // If production environment, store as base64
+        if (process.env.NODE_ENV === 'production' || process.env.RENDER) {
+            const fileBuffer = await fs.readFile(req.file.path);
+            const base64File = fileBuffer.toString('base64');
+            content = `PDF_BASE64:${req.file.filename}:${base64File}`;
+            
+            // Clean up temp file
+            await fs.unlink(req.file.path);
+        } else {
+            content = `PDF File: ${req.file.filename}`;
+        }
+        
         // Update the database to reference the new PDF
-        await new Promise((resolve, reject) => {
-            db.run(
-                `UPDATE checklists SET content = ?, version = version + 0.1, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-                [`PDF File: ${req.file.filename}`, id],
-                (err) => {
-                    if (err) reject(err);
-                    else resolve();
-                }
-            );
-        });
+        await pool.query(
+            `UPDATE checklists 
+             SET content = $1, updated_at = CURRENT_TIMESTAMP 
+             WHERE id = $2`,
+            [content, id]
+        );
         
         res.json({ 
             message: 'PDF uploaded successfully',
             filename: req.file.filename 
         });
     } catch (error) {
+        console.error('Error uploading PDF:', error);
+        
         // Clean up uploaded file on error
         if (req.file) {
             try {
@@ -275,27 +261,23 @@ router.post('/checklists/:id/upload-pdf', adminAuth, upload.single('pdfFile'), a
     }
 });
 
-// Get download analytics
+// Get download analytics - FIXED FOR POSTGRESQL
 router.get('/analytics/downloads', adminAuth, async (req, res) => {
     try {
-        const stats = await new Promise((resolve, reject) => {
-            db.all(`
-                SELECT 
-                    c.title,
-                    COUNT(d.id) as download_count,
-                    COUNT(DISTINCT d.ip_address) as unique_downloads
-                FROM checklists c
-                LEFT JOIN download_logs d ON c.id = d.checklist_id
-                GROUP BY c.id
-                ORDER BY download_count DESC
-            `, (err, rows) => {
-                if (err) reject(err);
-                else resolve(rows);
-            });
-        });
+        const result = await pool.query(`
+            SELECT 
+                c.title,
+                COUNT(d.id) as download_count,
+                COUNT(DISTINCT d.ip_address) as unique_downloads
+            FROM checklists c
+            LEFT JOIN downloads d ON c.id = d.checklist_id
+            GROUP BY c.id, c.title
+            ORDER BY download_count DESC
+        `);
         
-        res.json(stats);
+        res.json(result.rows);
     } catch (error) {
+        console.error('Error fetching analytics:', error);
         res.status(500).json({ error: error.message });
     }
 });
