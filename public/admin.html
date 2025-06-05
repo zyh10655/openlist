@@ -385,7 +385,7 @@
                     Math.round(stats.totalDownloads / stats.totalChecklists) || '-';
                 
                 // Load checklists
-                const checklists = await apiCall('/api/admin/checklists');
+                const checklists = await apiCall('/api/checklists');
                 const tbody = document.getElementById('checklistsTableBody');
                 tbody.innerHTML = checklists.map(checklist => `
                     <tr>
@@ -402,35 +402,36 @@
                 `).join('');
                 
                 // Load analytics
-                const analytics = await apiCall('/api/admin/analytics/downloads');
-                const analyticsContent = document.getElementById('analyticsContent');
-                analyticsContent.innerHTML = `
-                    <table style="width: 100%; margin-top: 1rem;">
-                        <thead>
-                            <tr>
-                                <th>Checklist</th>
-                                <th>Total Downloads</th>
-                                <th>Unique Users</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${analytics.map(item => `
-                                <tr>
-                                    <td>${item.title}</td>
-                                    <td>${item.download_count}</td>
-                                    <td>${item.unique_downloads}</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                `;
+                // June 5th —— Rewrite your api
+                // const analytics = await apiCall('/api/admin/analytics/downloads');
+                // const analyticsContent = document.getElementById('analyticsContent');
+                // analyticsContent.innerHTML = `
+                //     <table style="width: 100%; margin-top: 1rem;">
+                //         <thead>
+                //             <tr>
+                //                 <th>Checklist</th>
+                //                 <th>Total Downloads</th>
+                //                 <th>Unique Users</th>
+                //             </tr>
+                //         </thead>
+                //         <tbody>
+                //             ${analytics.map(item => `
+                //                 <tr>
+                //                     <td>${item.title}</td>
+                //                     <td>${item.download_count}</td>
+                //                     <td>${item.unique_downloads}</td>
+                //                 </tr>
+                //             `).join('')}
+                //         </tbody>
+                //     </table>
+                // `;
                 
-                // Load contribution stats
-                const contribStats = await apiCall('/api/contributions/stats');
-                if (contribStats.pending_contributions > 0) {
-                    document.getElementById('pendingCount').style.display = 'inline';
-                    document.getElementById('pendingCount').textContent = contribStats.pending_contributions;
-                }
+                // // Load contribution stats
+                // const contribStats = await apiCall('/api/contributions/stats');
+                // if (contribStats.pending_contributions > 0) {
+                //     document.getElementById('pendingCount').style.display = 'inline';
+                //     document.getElementById('pendingCount').textContent = contribStats.pending_contributions;
+                // }
                 
             } catch (error) {
                 alert('Failed to load dashboard. Check your admin key.');
@@ -454,7 +455,7 @@
             }
             
             try {
-                await apiCall(`/api/admin/checklists/${id}`, 'DELETE');
+                await apiCall(`/api/checklists/${id}`, 'DELETE');
                 alert('Checklist deleted successfully');
                 loadDashboard();
             } catch (error) {
@@ -494,7 +495,7 @@
             }
             
             try {
-                const response = await fetch('/api/admin/checklists', {
+                const response = await fetch('/api/checklists', {
                     method: 'POST',
                     headers: {
                         'X-Admin-Key': adminKey
