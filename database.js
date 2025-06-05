@@ -1,4 +1,4 @@
-// database.js - PostgreSQL version
+// database.js - PostgreSQL version with ZIP support
 const pool = require('./database-config');
 
 // Initialize database tables
@@ -19,7 +19,10 @@ async function initializeDatabase() {
                 content TEXT,
                 formats VARCHAR(255) DEFAULT 'pdf,markdown,excel',
                 contributors INTEGER DEFAULT 1,
-                is_featured BOOLEAN DEFAULT FALSE
+                is_featured BOOLEAN DEFAULT FALSE,
+                file_url TEXT,
+                file_type VARCHAR(10),
+                file_name TEXT
             )
         `);
 
@@ -45,13 +48,16 @@ async function initializeDatabase() {
         await pool.query(`
             CREATE TABLE IF NOT EXISTS downloads (
                 id SERIAL PRIMARY KEY,
-                checklist_id INTEGER REFERENCES checklists(id),
+                checklist_id INTEGER REFERENCES checklists(id) ON DELETE CASCADE,
                 format VARCHAR(20),
                 ip_address VARCHAR(45),
                 user_agent TEXT,
                 downloaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
+
+        // Add file support columns to existing checklists table if they don't exist
+        await addFileColumnsIfNeeded();
 
         console.log('PostgreSQL database initialized successfully');
         
@@ -67,6 +73,39 @@ async function initializeDatabase() {
     } catch (error) {
         console.error('Database initialization error:', error);
         throw error;
+    }
+}
+
+// Add file support columns if they don't exist (for existing databases)
+async function addFileColumnsIfNeeded() {
+    try {
+        // Check if file_url column exists
+        const columnCheck = await pool.query(`
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = 'checklists' AND column_name = 'file_url'
+        `);
+        
+        if (columnCheck.rows.length === 0) {
+            console.log('Adding file support columns to checklists table...');
+            
+            await pool.query(`
+                ALTER TABLE checklists 
+                ADD COLUMN IF NOT EXISTS file_url TEXT,
+                ADD COLUMN IF NOT EXISTS file_type VARCHAR(10),
+                ADD COLUMN IF NOT EXISTS file_name TEXT
+            `);
+            
+            // Add index for better performance
+            await pool.query(`
+                CREATE INDEX IF NOT EXISTS idx_checklists_file_type ON checklists(file_type)
+            `);
+            
+            console.log('File support columns added successfully');
+        }
+    } catch (error) {
+        console.error('Error adding file columns:', error);
+        // Don't throw - this is just a migration, continue with initialization
     }
 }
 
@@ -170,20 +209,70 @@ async function getChecklist(id) {
     }
 }
 
-// Create new checklist
+// Create new checklist - UPDATED FOR FILE SUPPORT
 async function createChecklist(data) {
     const client = await pool.connect();
     
     try {
         await client.query('BEGIN');
         
-        const { title, description, icon, category, content, features, items } = data;
+        const { 
+            title, 
+            description, 
+            icon, 
+            category, 
+            content, 
+            features, 
+            items,
+            fileUrl,
+            fileType, 
+            fileName 
+        } = data;
+        
+        // Determine file info from content if not explicitly provided
+        let finalFileUrl = fileUrl;
+        let finalFileType = fileType;
+        let finalFileName = fileName;
+        
+        // Extract file info from content if it's a file reference
+        if (!fileUrl && content) {
+            if (content.startsWith('PDF_BASE64:') || content.startsWith('PDF File:')) {
+                finalFileType = 'pdf';
+                const parts = content.split(':');
+                if (parts.length > 1) {
+                    finalFileName = parts[1];
+                }
+            } else if (content.startsWith('ZIP_BASE64:') || content.startsWith('ZIP File:')) {
+                finalFileType = 'zip';
+                const parts = content.split(':');
+                if (parts.length > 1) {
+                    finalFileName = parts[1];
+                }
+            }
+        }
         
         // Insert main checklist
         const result = await client.query(
-            `INSERT INTO checklists (title, description, icon, category, content) 
-             VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-            [title, description, icon || '📋', category || 'Other', content || '']
+            `INSERT INTO checklists (
+                title, 
+                description, 
+                icon, 
+                category, 
+                content,
+                file_url,
+                file_type,
+                file_name
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+            [
+                title, 
+                description, 
+                icon || '📋', 
+                category || 'Other', 
+                content || '',
+                finalFileUrl,
+                finalFileType,
+                finalFileName
+            ]
         );
         
         const checklistId = result.rows[0].id;
@@ -275,11 +364,7 @@ async function updateChecklist(id, data) {
     }
 }
 
-// Delete checklist
-// Replace your deleteChecklist function in database.js with this:
-
-// Replace your deleteChecklist function in database.js with this:
-
+// Delete checklist - ALREADY FIXED
 async function deleteChecklist(id) {
     try {
         console.log(`Deleting checklist ${id}`);
@@ -380,11 +465,23 @@ async function getChecklistsByCategory(category) {
     return result.rows;
 }
 
+// Get checklist by ID (needed for file downloads)
+async function getChecklistById(id) {
+    try {
+        const result = await pool.query('SELECT * FROM checklists WHERE id = $1', [id]);
+        return result.rows[0] || null;
+    } catch (error) {
+        console.error('Error getting checklist by ID:', error);
+        throw error;
+    }
+}
+
 module.exports = {
     pool,
     initializeDatabase,
     getAllChecklists,
     getChecklist,
+    getChecklistById,
     createChecklist,
     updateChecklist,
     deleteChecklist,
@@ -392,5 +489,6 @@ module.exports = {
     getStats,
     searchChecklists,
     getCategories,
-    getChecklistsByCategory
+    getChecklistsByCategory,
+    addFileColumnsIfNeeded
 };
