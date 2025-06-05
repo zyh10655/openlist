@@ -284,7 +284,7 @@
             border: none !important;
         }
 
-        .btn-:disabled {
+        .btn-download:disabled {
             opacity: 0.6;
             cursor: not-allowed;
         }
@@ -515,8 +515,8 @@
                     <p>Free Checklists</p>
                 </div>
                 <div class="stat-item">
-                    <h3 id="Count">-</h3>
-                    <p>s</p>
+                    <h3 id="downloadCount">-</h3>
+                    <p>Downloads</p>
                 </div>
                 <div class="stat-item">
                     <h3 id="contributorCount">-</h3>
@@ -534,7 +534,7 @@
     <section class="checklists" id="checklists">
         <div class="container">
             <h2 class="section-title">Browse Free Checklists</h2>
-            <p class="section-subtitle">All checklists are free to , modify, and share</p>
+            <p class="section-subtitle">All checklists are free to download, modify, and share</p>
             <div class="checklists-grid" id="checklistsGrid">
                 <!-- Checklists will be dynamically loaded here -->
             </div>
@@ -670,7 +670,7 @@
 
     <!-- Toast Notification -->
     <div class="toast" id="toast">
-        <span id="toastMessage"> started!</span>
+        <span id="toastMessage">Download started!</span>
     </div>
 
     <script>
@@ -705,7 +705,7 @@
                 const stats = await response.json();
                 
                 document.getElementById('checklistCount').textContent = stats.totalChecklists;
-                document.getElementById('Count').textContent = stats.totals.toLocaleString();
+                document.getElementById('downloadCount').textContent = stats.totalDownloads.toLocaleString();
                 document.getElementById('contributorCount').textContent = stats.totalContributors;
                 document.getElementById('updateCount').textContent = stats.updateFrequency;
             } catch (error) {
@@ -730,7 +730,7 @@
                         </div>
                         <div class="checklist-stats">
                             <span class="stat-badge">
-                                <span>⬇️</span> ${checklist.s.toLocaleString()}
+                                <span>⬇️</span> ${checklist.downloads.toLocaleString()}
                             </span>
                             <span class="stat-badge">
                                 <span>👥</span> ${checklist.contributors}
@@ -738,8 +738,8 @@
                         </div>
                         <div class="checklist-actions">
                             <button onclick="viewChecklist(${checklist.id})">View Details</button>
-                            <button class="btn-" onclick="quick(${checklist.id}, 'pdf')">
-                                 PDF
+                            <button class="btn-download" onclick="quickDownload(${checklist.id}, 'pdf')">
+                                Download PDF
                             </button>
                         </div>
                     </div>
@@ -802,7 +802,44 @@
 
         // Download checklist
         async function downloadChecklist(checklistId, format) {
-            window.location.href = `/api/checklists/${checklistId}/download?format=${format}`;
+            const checklist = checklists.find(c => c.id === checklistId);
+            const downloadBtn = event.target;
+            const originalText = downloadBtn.innerHTML;
+            
+            try {
+                // Show loading state
+                downloadBtn.disabled = true;
+                downloadBtn.innerHTML = '<span class="loading"></span> Downloading...';
+                
+                // Create download link
+                const downloadUrl = `${API_BASE}/checklists/${checklistId}/download?format=${format}`;
+                //window.location.href = `/api/checklists/${checklistId}/download?format=${format}`;
+                // Create temporary link and trigger download
+                const link = document.createElement('a');
+                link.href = downloadUrl;
+                link.download = `${checklist.title.toLowerCase().replace(/\s+/g, '-')}-v${checklist.version}.${format}`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                // Update UI
+                checklist.downloads += 1;
+                renderChecklists();
+                showToast(`Downloading ${checklist.title} in ${format.toUpperCase()} format`);
+                
+                // Close modal if open
+                if (document.getElementById('checklistModal').style.display === 'block') {
+                    closeModal();
+                }
+                
+            } catch (error) {
+                console.error('Download failed:', error);
+                showToast('Download failed. Please try again.', 'error');
+            } finally {
+                // Restore button state
+                downloadBtn.disabled = false;
+                downloadBtn.innerHTML = originalText;
+            }
         }
 
         // Show toast notification
