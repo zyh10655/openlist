@@ -1,4 +1,4 @@
-// admin-routes.js - FIXED FOR POSTGRESQL
+// admin-routes.js - FIXED FOR POSTGRESQL + ZIP SUPPORT
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
@@ -13,10 +13,10 @@ const {
     deleteChecklist
 } = require('./database');
 
-// Configure multer for file uploads
+// Configure multer for both PDF and ZIP file uploads
 const storage = multer.diskStorage({
     destination: async function (req, file, cb) {
-        const dir = path.join(__dirname, 'checklists');
+        const dir = path.join(__dirname, 'uploads');
         try {
             await fs.mkdir(dir, { recursive: true });
             cb(null, dir);
@@ -25,30 +25,39 @@ const storage = multer.diskStorage({
         }
     },
     filename: function (req, file, cb) {
-        // Keep the original filename if it's a PDF
-        if (file.originalname.endsWith('.pdf')) {
-            cb(null, file.originalname);
-        } else {
-            // Generate filename based on title for non-PDF files
-            const title = req.body.title || 'checklist';
-            const cleanTitle = title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-            const filename = `${cleanTitle}-v1.0.pdf`;
-            cb(null, filename);
-        }
+        // Generate unique filename with timestamp
+        const timestamp = Date.now();
+        const cleanName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
+        const filename = `${timestamp}_${cleanName}`;
+        cb(null, filename);
     }
 });
 
 const upload = multer({ 
     storage: storage,
     fileFilter: (req, file, cb) => {
+        console.log('File upload attempt:', {
+            fieldname: file.fieldname,
+            originalname: file.originalname,
+            mimetype: file.mimetype
+        });
+        
+        // Accept PDF files
         if (file.mimetype === 'application/pdf') {
             cb(null, true);
-        } else {
-            cb(new Error('Only PDF files are allowed'));
+        }
+        // Accept ZIP files  
+        else if (file.mimetype === 'application/zip' || 
+                 file.mimetype === 'application/x-zip-compressed' ||
+                 file.originalname.toLowerCase().endsWith('.zip')) {
+            cb(null, true);
+        }
+        else {
+            cb(new Error('Only PDF and ZIP files are allowed'));
         }
     },
     limits: {
-        fileSize: 10 * 1024 * 1024 // 10MB limit
+        fileSize: 50 * 1024 * 1024 // 50MB limit for ZIP files
     }
 });
 
@@ -73,13 +82,17 @@ router.get('/checklists', adminAuth, async (req, res) => {
     }
 });
 
-// Create new checklist
-router.post('/checklists', adminAuth, upload.single('pdfFile'), async (req, res) => {
+// Create new checklist - UPDATED FOR PDF AND ZIP SUPPORT
+router.post('/checklists', adminAuth, upload.fields([
+    { name: 'pdfFile', maxCount: 1 },
+    { name: 'zipFile', maxCount: 1 }
+]), async (req, res) => {
     try {
-        console.log('Received request body:', req.body);
-        console.log('Received file:', req.file);
+        console.log('Create checklist request received');
+        console.log('Body:', req.body);
+        console.log('Files:', req.files);
         
-        const { title, description, icon, category, features } = req.body;
+        const { title, description, icon, category, features, content } = req.body;
         
         // Validate required fields
         if (!title || !description) {
@@ -97,38 +110,68 @@ router.post('/checklists', adminAuth, upload.single('pdfFile'), async (req, res)
             description,
             icon: icon || '📋',
             category: category || 'Other',
-            content: req.body.content || '',
+            content: content || '',
             features: featureList,
-            items: [] // No items for PDF uploads
+            items: [] // No items for file uploads
         };
         
-        // If PDF was uploaded and we're on Render (production)
-        if (req.file && (process.env.NODE_ENV === 'production' || process.env.RENDER)) {
-            console.log('Production environment detected, storing PDF as base64');
-            
-            // Read the file and store as base64
-            const fileBuffer = await fs.readFile(req.file.path);
-            const base64File = fileBuffer.toString('base64');
-            checklistData.content = `PDF_BASE64:${req.file.filename}:${base64File}`;
-            
-            console.log('PDF stored as base64, length:', base64File.length);
-            
-            // Clean up the temporary file
-            try {
-                await fs.unlink(req.file.path);
-                console.log('Temp file cleaned up');
-            } catch (err) {
-                console.error('Failed to clean up temp file:', err);
+        let uploadedFile = null;
+        let fileType = null;
+        
+        // Check for PDF file upload
+        if (req.files && req.files.pdfFile && req.files.pdfFile[0]) {
+            uploadedFile = req.files.pdfFile[0];
+            fileType = 'pdf';
+            console.log('Processing PDF file:', uploadedFile.originalname);
+        }
+        // Check for ZIP file upload
+        else if (req.files && req.files.zipFile && req.files.zipFile[0]) {
+            uploadedFile = req.files.zipFile[0];
+            fileType = 'zip';
+            console.log('Processing ZIP file:', uploadedFile.originalname);
+        }
+        
+        // Handle file processing if a file was uploaded
+        if (uploadedFile) {
+            // If production environment, store as base64
+            if (process.env.NODE_ENV === 'production' || process.env.RENDER) {
+                console.log('Production environment detected, storing file as base64');
+                
+                // Read the file and store as base64
+                const fileBuffer = await fs.readFile(uploadedFile.path);
+                const base64File = fileBuffer.toString('base64');
+                
+                if (fileType === 'pdf') {
+                    checklistData.content = `PDF_BASE64:${uploadedFile.filename}:${base64File}`;
+                } else if (fileType === 'zip') {
+                    checklistData.content = `ZIP_BASE64:${uploadedFile.filename}:${base64File}`;
+                }
+                
+                console.log(`${fileType.toUpperCase()} stored as base64, length:`, base64File.length);
+                
+                // Clean up the temporary file
+                try {
+                    await fs.unlink(uploadedFile.path);
+                    console.log('Temp file cleaned up');
+                } catch (err) {
+                    console.error('Failed to clean up temp file:', err);
+                }
+            } else {
+                // Local development - store file reference
+                console.log('Development environment, storing file reference');
+                
+                if (fileType === 'pdf') {
+                    checklistData.content = `PDF File: ${uploadedFile.filename}`;
+                } else if (fileType === 'zip') {
+                    checklistData.content = `ZIP File: ${uploadedFile.filename}`;
+                }
+                
+                // Create a markdown placeholder
+                const fileTypeLabel = fileType === 'zip' ? 'ZIP Package' : 'PDF Document';
+                const mdContent = `# ${title}\n\n${description}\n\n[Download ${fileTypeLabel}](${uploadedFile.filename})\n\n## Features\n${featureList.map(f => `- ${f}`).join('\n')}`;
+                const mdFilename = uploadedFile.filename.replace(/\.(pdf|zip)$/, '.md');
+                await fs.writeFile(path.join(__dirname, 'uploads', mdFilename), mdContent);
             }
-        } else if (req.file) {
-            // Local development - store file reference
-            console.log('Development environment, storing file reference');
-            checklistData.content = `PDF File: ${req.file.filename}`;
-            
-            // Also create a markdown placeholder
-            const mdContent = `# ${title}\n\n${description}\n\n[Download PDF Version](${req.file.filename})\n\n## Features\n${featureList.map(f => `- ${f}`).join('\n')}`;
-            const mdFilename = req.file.filename.replace('.pdf', '.md');
-            await fs.writeFile(path.join(__dirname, 'checklists', mdFilename), mdContent);
         }
         
         console.log('Creating checklist with data:', {
@@ -142,21 +185,26 @@ router.post('/checklists', adminAuth, upload.single('pdfFile'), async (req, res)
         console.log('Checklist created with ID:', checklistId);
         
         res.json({ 
+            success: true,
             id: checklistId, 
             message: 'Checklist created successfully',
-            filename: req.file ? req.file.filename : null
+            filename: uploadedFile ? uploadedFile.filename : null,
+            fileType: fileType
         });
     } catch (error) {
         console.error('Error creating checklist:', error);
         console.error('Error stack:', error.stack);
         
-        // Clean up uploaded file if database operation failed
-        if (req.file) {
-            try {
-                await fs.unlink(req.file.path);
-                console.log('Cleaned up uploaded file');
-            } catch (unlinkError) {
-                console.error('Failed to clean up file:', unlinkError);
+        // Clean up uploaded files if database operation failed
+        if (req.files) {
+            const allFiles = Object.values(req.files).flat();
+            for (const file of allFiles) {
+                try {
+                    await fs.unlink(file.path);
+                    console.log('Cleaned up uploaded file:', file.filename);
+                } catch (unlinkError) {
+                    console.error('Failed to clean up file:', unlinkError);
+                }
             }
         }
         res.status(500).json({ error: error.message || 'Failed to create checklist' });
@@ -211,30 +259,54 @@ router.post('/checklists/:id/items', adminAuth, async (req, res) => {
     }
 });
 
-// Upload PDF for existing checklist - FIXED FOR POSTGRESQL
-router.post('/checklists/:id/upload-pdf', adminAuth, upload.single('pdfFile'), async (req, res) => {
+// Upload file for existing checklist - UPDATED FOR PDF AND ZIP
+router.post('/checklists/:id/upload-file', adminAuth, upload.fields([
+    { name: 'pdfFile', maxCount: 1 },
+    { name: 'zipFile', maxCount: 1 }
+]), async (req, res) => {
     const { id } = req.params;
     
     try {
-        if (!req.file) {
-            return res.status(400).json({ error: 'No PDF file uploaded' });
+        let uploadedFile = null;
+        let fileType = null;
+        
+        // Check which type of file was uploaded
+        if (req.files && req.files.pdfFile && req.files.pdfFile[0]) {
+            uploadedFile = req.files.pdfFile[0];
+            fileType = 'pdf';
+        } else if (req.files && req.files.zipFile && req.files.zipFile[0]) {
+            uploadedFile = req.files.zipFile[0];
+            fileType = 'zip';
+        }
+        
+        if (!uploadedFile) {
+            return res.status(400).json({ error: 'No file uploaded' });
         }
         
         let content;
         
         // If production environment, store as base64
         if (process.env.NODE_ENV === 'production' || process.env.RENDER) {
-            const fileBuffer = await fs.readFile(req.file.path);
+            const fileBuffer = await fs.readFile(uploadedFile.path);
             const base64File = fileBuffer.toString('base64');
-            content = `PDF_BASE64:${req.file.filename}:${base64File}`;
+            
+            if (fileType === 'pdf') {
+                content = `PDF_BASE64:${uploadedFile.filename}:${base64File}`;
+            } else if (fileType === 'zip') {
+                content = `ZIP_BASE64:${uploadedFile.filename}:${base64File}`;
+            }
             
             // Clean up temp file
-            await fs.unlink(req.file.path);
+            await fs.unlink(uploadedFile.path);
         } else {
-            content = `PDF File: ${req.file.filename}`;
+            if (fileType === 'pdf') {
+                content = `PDF File: ${uploadedFile.filename}`;
+            } else if (fileType === 'zip') {
+                content = `ZIP File: ${uploadedFile.filename}`;
+            }
         }
         
-        // Update the database to reference the new PDF
+        // Update the database to reference the new file
         await pool.query(
             `UPDATE checklists 
              SET content = $1, updated_at = CURRENT_TIMESTAMP 
@@ -243,18 +315,22 @@ router.post('/checklists/:id/upload-pdf', adminAuth, upload.single('pdfFile'), a
         );
         
         res.json({ 
-            message: 'PDF uploaded successfully',
-            filename: req.file.filename 
+            message: `${fileType.toUpperCase()} uploaded successfully`,
+            filename: uploadedFile.filename,
+            fileType: fileType
         });
     } catch (error) {
-        console.error('Error uploading PDF:', error);
+        console.error('Error uploading file:', error);
         
-        // Clean up uploaded file on error
-        if (req.file) {
-            try {
-                await fs.unlink(req.file.path);
-            } catch (unlinkError) {
-                console.error('Failed to clean up file:', unlinkError);
+        // Clean up uploaded files on error
+        if (req.files) {
+            const allFiles = Object.values(req.files).flat();
+            for (const file of allFiles) {
+                try {
+                    await fs.unlink(file.path);
+                } catch (unlinkError) {
+                    console.error('Failed to clean up file:', unlinkError);
+                }
             }
         }
         res.status(500).json({ error: error.message });
