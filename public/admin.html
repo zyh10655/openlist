@@ -279,59 +279,63 @@
 
     <!-- Create/Edit Modal -->
     <div class="modal" id="checklistModal">
-        <div class="modal-content">
-            <h2 id="modalTitle">Create New Checklist</h2>
-            <form id="checklistForm">
-                <div class="form-group">
-                    <label>Title</label>
-                    <input type="text" id="title" required>
-                </div>
-                
-                <div class="form-group">
-                    <label>Description</label>
-                    <textarea id="description" required></textarea>
-                </div>
-                
-                <div class="form-group">
-                    <label>Icon (Emoji)</label>
-                    <input type="text" id="icon" placeholder="📋" maxlength="2">
-                </div>
-                
-                <div class="form-group">
-                    <label>Category</label>
-                    <select id="category">
-                        <option value="Business">Business</option>
-                        <option value="Healthcare">Healthcare</option>
-                        <option value="Technology">Technology</option>
-                        <option value="Education">Education</option>
-                        <option value="Creative">Creative</option>
-                        <option value="Other">Other</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label>Features (one per line)</label>
-                    <textarea id="features" placeholder="150+ step checklist&#10;Permit templates&#10;Planning tools"></textarea>
-                </div>
-                
-                <div class="form-group">
-                    <label>Content (Markdown)</label>
-                    <textarea id="content" style="min-height: 200px;"></textarea>
-                </div>
-                
-                <div class="form-group">
-                    <label>OR Upload PDF File</label>
-                    <input type="file" id="pdfFile" accept=".pdf" onchange="handlePdfUpload(event)">
-                    <small style="color: var(--text-light);">Upload a PDF file instead of writing markdown content</small>
-                </div>
-                
-                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
-                    <button type="submit" class="btn">Save Checklist</button>
-                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-                </div>
-            </form>
-        </div>
+    <div class="modal-content">
+        <h2 id="modalTitle">Create New Checklist</h2>
+        <form id="checklistForm">
+            <div class="form-group">
+                <label>Title</label>
+                <input type="text" id="title" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Description</label>
+                <textarea id="description" required></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label>Icon (Emoji)</label>
+                <input type="text" id="icon" placeholder="📋" maxlength="2">
+            </div>
+            
+            <div class="form-group">
+                <label>Category</label>
+                <select id="category">
+                    <option value="Business">Business</option>
+                    <option value="Healthcare">Healthcare</option>
+                    <option value="Technology">Technology</option>
+                    <option value="Education">Education</option>
+                    <option value="Creative">Creative</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Features (one per line)</label>
+                <textarea id="features" placeholder="150+ step checklist&#10;Permit templates&#10;Planning tools"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label>Content (Markdown)</label>
+                <textarea id="content" style="min-height: 200px;" placeholder="Write your checklist content in markdown..."></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label>OR Upload File</label>
+                <input type="file" id="fileUpload" accept=".pdf,.zip" onchange="handleFileUpload(event)">
+                <small style="color: var(--text-light); display: block; margin-top: 0.5rem;">
+                    📄 <strong>PDF:</strong> For single document checklists<br>
+                    📦 <strong>ZIP:</strong> For checklists with multiple files (templates, spreadsheets, etc.)
+                </small>
+                <div id="filePreview" style="margin-top: 1rem; display: none;"></div>
+            </div>
+            
+            <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                <button type="submit" class="btn">Save Checklist</button>
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+            </div>
+        </form>
     </div>
+</div>
 
     <!-- Contributions Modal -->
     <div class="modal" id="contributionsModal">
