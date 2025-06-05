@@ -7,7 +7,7 @@ const fs = require('fs').promises;
 const markdownPdf = require('markdown-pdf');
 
 const app = express();
-const PORT = process.env.PORT || 10000;
+const PORT = process.env.PORT || 3000;
 
 // CORS configuration
 app.use(cors({
@@ -394,19 +394,17 @@ app.get('/api/debug', async (req, res) => {
         const checklists = await getAllChecklists();
         const categories = await getCategories();
         
-        // Get raw database info
-        const { pool } = require('./database');
-        const rawCount = await pool.query('SELECT COUNT(*) FROM checklists');
-        const rawChecklists = await pool.query('SELECT id, title, category, created_at FROM checklists ORDER BY id DESC LIMIT 5');
-        
         res.json({
             database: 'PostgreSQL',
             stats,
             checklistCount: checklists.length,
             categories,
-            rawCount: rawCount.rows[0].count,
-            recentChecklists: rawChecklists.rows,
-            firstChecklist: checklists[0] || null
+            recentChecklists: checklists.slice(0, 5).map(c => ({
+                id: c.id,
+                title: c.title,
+                category: c.category,
+                created_at: c.created_at
+            }))
         });
     } catch (error) {
         res.json({ 
