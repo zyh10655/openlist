@@ -1,26 +1,12 @@
-require('dotenv').config();
 // server.js
+// Load environment variables
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs').promises;
-const markdownPdf = require('markdown-pdf');
-
-const app = express();
-const PORT = process.env.PORT || 10000;
-
-// CORS configuration
-app.use(cors({
-    origin: true, // Allow all origins in development
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    exposedHeaders: ['Content-Disposition', 'Content-Length', 'Content-Type']
-}));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// Database
+const markdownpdf = require('markdown-pdf');
 const { 
     initializeDatabase, 
     getAllChecklists, 
@@ -28,199 +14,176 @@ const {
     createChecklist,
     incrementDownloads,
     getStats,
+    searchChecklists,
+    getCategories,
     getChecklistsByCategory,
-    getCategories
+    pool
 } = require('./database');
 
-// Initialize database on startup
-initializeDatabase().then(() => {
-    console.log('Database initialized');
-}).catch(err => {
-    console.error('Failed to initialize database:', err);
-});
+const app = express();
+const PORT = process.env.PORT || 10000;
 
-// Serve static files
-app.use(express.static('public'));
+// CORS configuration
+app.use(cors({
+    origin: true,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    exposedHeaders: ['Content-Disposition', 'Content-Length', 'Content-Type']
+}));
 
-// Serve uploaded checklists (PDFs and other files)
-app.use('/checklists', express.static(path.join(__dirname, 'checklists')));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Home page
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-// API Routes
+// API Routes - IMPORTANT: These must come before static file serving
 
 // Get all checklists
 app.get('/api/checklists', async (req, res) => {
     try {
         const checklists = await getAllChecklists();
-        res.json(checklists);
+        console.log('API: Fetching all checklists, count:', checklists.length);
+        
+        // Transform database results to match frontend expectations
+        const formattedChecklists = checklists.map(checklist => ({
+            id: checklist.id,
+            title: checklist.title,
+            description: checklist.description,
+            icon: checklist.icon || '📋',
+            version: checklist.version,
+            lastUpdated: new Date(checklist.updated_at).toLocaleDateString(),
+            downloads: checklist.downloads,
+            contributors: checklist.contributors || 1,
+            category: checklist.category,
+            formats: checklist.formats ? checklist.formats.split(',').reduce((acc, format) => {
+                acc[format] = true;
+                return acc;
+            }, {}) : { pdf: true, markdown: true, excel: true },
+            features: []
+        }));
+        
+        res.json(formattedChecklists);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error('Error fetching checklists:', error);
+        res.status(500).json({ error: 'Failed to fetch checklists' });
     }
 });
 
-// Get single checklist
-app.get('/api/checklists/:id', async (req, res) => {
-    try {
-        const checklist = await getChecklist(req.params.id);
-        if (!checklist) {
-            return res.status(404).json({ error: 'Checklist not found' });
-        }
-        res.json(checklist);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+// Download checklist - MUST BE BEFORE :id route
+app.get('/api/checklists/:id/download', async (req, res) => {
+    const { id } = req.params;
+    const { format } = req.query;
+    
+    console.log('Download endpoint hit - ID:', id, 'Format:', format);
+    
+    if (!format || !['pdf', 'markdown', 'excel'].includes(format)) {
+        return res.status(400).json({ error: 'Invalid format. Use pdf, markdown, or excel.' });
     }
-});
-
-// Get checklists by category
-app.get('/api/categories/:category/checklists', async (req, res) => {
-    try {
-        const checklists = await getChecklistsByCategory(req.params.category);
-        res.json(checklists);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Get all categories
-app.get('/api/categories', async (req, res) => {
-    try {
-        const categories = await getCategories();
-        res.json(categories);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Download checklist
-app.get('/api/checklists/:id/download/:format', async (req, res) => {
-    const { id, format } = req.params;
     
     try {
-        const checklist = await getChecklist(id);
+        const result = await getChecklist(id);
         
-        if (!checklist || !checklist.data) {
+        if (!result) {
             return res.status(404).json({ error: 'Checklist not found' });
         }
         
-        const title = checklist.data.title;
-        const content = checklist.data.content;
+        const { data, features, items } = result;
+        const { content } = data;
         
-        // Log the checklist data for debugging
         console.log('Download request for checklist:', id, 'format:', format);
-        console.log('Content type:', content ? content.substring(0, 50) + '...' : 'No content');
+        console.log('Has content:', !!content);
         
-        // Check if this is a PDF upload
-        if (format === 'pdf' && content) {
-            // Check for base64 encoded PDF (production)
-            if (content.startsWith('PDF_BASE64:')) {
-                const parts = content.split(':');
-                const originalFilename = parts[1];
-                const base64Data = parts[2];
+        // Check if this is a PDF upload with stored content
+        if (format === 'pdf' && content && content.startsWith('PDF_BASE64:')) {
+            const parts = content.split(':');
+            const originalFilename = parts[1];
+            const base64Data = parts[2];
+            
+            // Sanitize filename
+            const filename = originalFilename.replace(/[^a-zA-Z0-9.-_]/g, '_');
+            
+            console.log('Serving base64 PDF:', filename);
+            
+            try {
+                // Convert base64 to buffer
+                const pdfBuffer = Buffer.from(base64Data, 'base64');
+                console.log('PDF buffer size:', pdfBuffer.length);
                 
-                // Sanitize filename
-                const filename = originalFilename.replace(/[^a-zA-Z0-9.-_]/g, '_');
+                // Log download
+                await incrementDownloads(id, format, req.ip, req.get('User-Agent'));
                 
-                console.log('Serving base64 PDF:', filename);
-                console.log('Base64 length:', base64Data.length);
+                // Set headers and send
+                res.setHeader('Content-Type', 'application/pdf');
+                res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+                res.setHeader('Content-Length', pdfBuffer.length);
                 
-                try {
-                    // Convert base64 to buffer
-                    const pdfBuffer = Buffer.from(base64Data, 'base64');
-                    console.log('PDF buffer size:', pdfBuffer.length);
-                    
-                    // Log download
-                    const ipAddress = req.ip || req.connection.remoteAddress;
-                    const userAgent = req.get('User-Agent');
-                    await incrementDownloads(id, format, ipAddress, userAgent);
-                    
-                    // Set headers and send
-                    res.setHeader('Content-Type', 'application/pdf');
-                    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-                    res.setHeader('Content-Length', pdfBuffer.length);
-                    
-                    // Alternative: Force download by setting additional headers
-                    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-                    res.setHeader('Pragma', 'no-cache');
-                    res.setHeader('Expires', '0');
-                    res.setHeader('Content-Transfer-Encoding', 'binary');
-                    
-                    console.log('Sending PDF response with headers:', {
-                        'Content-Type': 'application/pdf',
-                        'Content-Disposition': `attachment; filename="${filename}"`,
-                        'Content-Length': pdfBuffer.length
-                    });
-                    
-                    return res.status(200).end(pdfBuffer);
-                } catch (error) {
-                    console.error('Error processing base64 PDF:', error);
-                    return res.status(500).json({ error: 'Failed to process PDF' });
-                }
-            }
-            // Check for file-based PDF (local development)
-            else if (content.startsWith('PDF File:')) {
-                // Extract filename from content
-                const pdfFilename = content.replace('PDF File: ', '').trim();
-                const pdfPath = path.join(__dirname, 'checklists', pdfFilename);
-                
-                console.log('Looking for PDF file at:', pdfPath);
-                
-                // Check if PDF file exists
-                try {
-                    await fs.access(pdfPath);
-                    
-                    // Log download
-                    const ipAddress = req.ip || req.connection.remoteAddress;
-                    const userAgent = req.get('User-Agent');
-                    await incrementDownloads(id, format, ipAddress, userAgent);
-                    
-                    // Set proper headers for PDF download
-                    res.setHeader('Content-Type', 'application/pdf');
-                    res.setHeader('Content-Disposition', `attachment; filename="${path.basename(pdfFilename)}"`);
-                    
-                    // Send the actual PDF file
-                    return res.sendFile(pdfPath);
-                } catch (err) {
-                    console.error('PDF file not found:', pdfPath);
-                    console.error('Error:', err);
-                    // Fall back to generating PDF from markdown
-                }
+                return res.send(pdfBuffer);
+            } catch (error) {
+                console.error('Error processing base64 PDF:', error);
+                return res.status(500).json({ error: 'Failed to process PDF' });
             }
         }
         
-        // Log download for generated files
-        const ipAddress = req.ip || req.connection.remoteAddress;
-        const userAgent = req.get('User-Agent');
-        await incrementDownloads(id, format, ipAddress, userAgent);
+        // Generate content from features and items
+        console.log('Generating content from checklist data');
         
-        // For non-PDF or when PDF file doesn't exist, generate from markdown
-        if (format === 'pdf') {
-            const markdownContent = generateMarkdown(checklist);
+        // Create markdown content
+        let markdownContent = `# ${data.title}\n\n${data.description || 'No description provided.'}\n\n`;
+        
+        if (features && features.length > 0) {
+            markdownContent += `## Key Features\n\n`;
+            features.forEach(feature => {
+                markdownContent += `- ${feature}\n`;
+            });
+            markdownContent += '\n';
+        }
+        
+        if (items && items.length > 0) {
+            markdownContent += `## Checklist Items\n\n`;
             
-            markdownPdf().from.string(markdownContent).to.buffer((err, buffer) => {
+            // Group items by phase
+            const phases = {};
+            items.forEach(item => {
+                const phase = item.phase || 'General';
+                if (!phases[phase]) {
+                    phases[phase] = [];
+                }
+                phases[phase].push(item);
+            });
+            
+            Object.entries(phases).forEach(([phase, phaseItems]) => {
+                markdownContent += `### ${phase}\n\n`;
+                phaseItems.forEach(item => {
+                    const requiredMark = item.is_required ? ' *(Required)*' : '';
+                    markdownContent += `- [ ] ${item.item_text}${requiredMark}\n`;
+                });
+                markdownContent += '\n';
+            });
+        }
+        
+        markdownContent += `\n---\n\n*Generated on ${new Date().toLocaleDateString()} by OpenChecklist*\n`;
+        
+        // Generate file based on format
+        if (format === 'pdf') {
+            markdownpdf().from.string(markdownContent).to.buffer(async (err, buffer) => {
                 if (err) {
                     console.error('PDF generation error:', err);
-                    res.status(500).json({ error: 'Failed to generate PDF' });
-                    return;
+                    return res.status(500).json({ error: 'Failed to generate PDF' });
                 }
                 
+                await incrementDownloads(id, format, req.ip, req.get('User-Agent'));
+                
                 res.setHeader('Content-Type', 'application/pdf');
-                res.setHeader('Content-Disposition', `attachment; filename="${title.toLowerCase().replace(/\s+/g, '-')}-checklist.pdf"`);
+                res.setHeader('Content-Disposition', `attachment; filename="${data.title.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-checklist.pdf"`);
                 res.send(buffer);
             });
         } else if (format === 'markdown') {
-            const markdownContent = generateMarkdown(checklist);
+            await incrementDownloads(id, format, req.ip, req.get('User-Agent'));
+            
             res.setHeader('Content-Type', 'text/markdown');
-            res.setHeader('Content-Disposition', `attachment; filename="${title.toLowerCase().replace(/\s+/g, '-')}-checklist.md"`);
+            res.setHeader('Content-Disposition', `attachment; filename="${data.title.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-checklist.md"`);
             res.send(markdownContent);
-        } else if (format === 'excel') {
-            // Implement Excel generation here
-            res.status(501).json({ error: 'Excel format not yet implemented' });
         } else {
-            res.status(400).json({ error: 'Invalid format' });
+            res.status(501).json({ error: 'Excel export not yet implemented' });
         }
     } catch (error) {
         console.error('Download error:', error);
@@ -228,87 +191,92 @@ app.get('/api/checklists/:id/download/:format', async (req, res) => {
     }
 });
 
-// Get statistics
+// Get single checklist details
+app.get('/api/checklists/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await getChecklist(id);
+        
+        if (!result) {
+            return res.status(404).json({ error: 'Checklist not found' });
+        }
+        
+        // Transform to match frontend expectations
+        const checklist = {
+            id: result.data.id,
+            title: result.data.title,
+            description: result.data.description,
+            icon: result.data.icon || '📋',
+            version: result.data.version,
+            lastUpdated: new Date(result.data.updated_at).toLocaleDateString(),
+            downloads: result.data.downloads,
+            features: result.features,
+            items: result.items,
+            formats: { pdf: true, markdown: true, excel: true }
+        };
+        
+        res.json(checklist);
+    } catch (error) {
+        console.error('Error fetching checklist:', error);
+        res.status(500).json({ error: 'Failed to fetch checklist' });
+    }
+});
+
+// Get stats
 app.get('/api/stats', async (req, res) => {
     try {
         const stats = await getStats();
         res.json(stats);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error('Error fetching stats:', error);
+        res.status(500).json({ error: 'Failed to fetch stats' });
     }
 });
 
-// Admin routes
-const adminRoutes = require('./admin-routes');
-app.use('/api/admin', adminRoutes);
-
-// Contribution routes
-const { router: contributionRoutes, createContributionsTable } = require('./contributions');
-app.use('/api/contributions', contributionRoutes);
-
-// Initialize contributions table
-createContributionsTable().then(() => {
-    console.log('Contributions table ready');
-}).catch(err => {
-    console.error('Failed to create contributions table:', err);
-});
-
-// Admin page
-app.get('/admin', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'admin.html'));
-});
-
-// Helper function to generate markdown from checklist data
-function generateMarkdown(checklist) {
-    const { data, features, items } = checklist;
-    let markdown = `# ${data.title}\n\n`;
-    markdown += `${data.description}\n\n`;
-    markdown += `**Version:** ${data.version || '1.0'}\n`;
-    markdown += `**Category:** ${data.category || 'General'}\n\n`;
-    
-    if (features && features.length > 0) {
-        markdown += `## Features\n\n`;
-        features.forEach(feature => {
-            markdown += `- ${feature}\n`;
-        });
-        markdown += '\n';
-    }
-    
-    if (items && items.length > 0) {
-        let currentPhase = '';
-        items.forEach(item => {
-            if (item.phase !== currentPhase) {
-                currentPhase = item.phase;
-                markdown += `## ${currentPhase}\n\n`;
-            }
-            markdown += `- [${item.is_required ? 'x' : ' '}] ${item.item_text}\n`;
-        });
-    }
-    
-    if (data.content && !data.content.startsWith('PDF File:')) {
-        markdown += `\n## Additional Information\n\n${data.content}\n`;
-    }
-    
-    return markdown;
-}
-
-// Temporary debug routes (remove in production)
-app.get('/api/debug/db', async (req, res) => {
+// Search checklists
+app.get('/api/search', async (req, res) => {
     try {
-        const stats = await getStats();
-        const checklists = await getAllChecklists();
-        res.json({
-            database: process.env.DATABASE_URL ? 'PostgreSQL' : 'SQLite',
-            stats,
-            checklistCount: checklists.length,
-            firstChecklist: checklists[0] || null
-        });
+        const { q } = req.query;
+        if (!q) {
+            return res.json([]);
+        }
+        
+        const results = await searchChecklists(q);
+        
+        // Transform results
+        const formattedResults = results.map(checklist => ({
+            id: checklist.id,
+            title: checklist.title,
+            description: checklist.description,
+            icon: checklist.icon || '📋',
+            version: checklist.version,
+            lastUpdated: new Date(checklist.updated_at).toLocaleDateString(),
+            downloads: checklist.downloads,
+            contributors: checklist.contributors || 1,
+            category: checklist.category,
+            formats: { pdf: true, markdown: true, excel: true },
+            features: []
+        }));
+        
+        res.json(formattedResults);
     } catch (error) {
-        res.json({ error: error.message, stack: error.stack });
+        console.error('Error searching checklists:', error);
+        res.status(500).json({ error: 'Failed to search checklists' });
     }
 });
 
-// Test endpoint to verify deployment
+// Get categories
+app.get('/api/categories', async (req, res) => {
+    try {
+        const categories = await getCategories();
+        res.json(categories);
+    } catch (error) {
+        console.error('Error fetching categories:', error);
+        res.status(500).json({ error: 'Failed to fetch categories' });
+    }
+});
+
+// Test endpoint
 app.get('/api/version', (req, res) => {
     res.json({ 
         version: '2.0',
@@ -317,47 +285,34 @@ app.get('/api/version', (req, res) => {
     });
 });
 
-// Test endpoint to verify PDF data
-app.get('/api/test-download/:id', async (req, res) => {
+// Debug endpoints
+app.get('/api/debug', async (req, res) => {
     try {
-        const { id } = req.params;
-        const result = await getChecklist(id);
+        const stats = await getStats();
+        const checklists = await getAllChecklists();
+        const categories = await getCategories();
         
-        if (!result || !result.data.content) {
-            return res.status(404).json({ error: 'No content found' });
-        }
-        
-        const content = result.data.content;
-        
-        if (content.startsWith('PDF_BASE64:')) {
-            const parts = content.split(':');
-            const filename = parts[1];
-            const base64Data = parts[2];
-            
-            // Test if base64 is valid
-            try {
-                const buffer = Buffer.from(base64Data, 'base64');
-                const isValidPDF = buffer.slice(0, 5).toString() === '%PDF-';
-                
-                res.json({
-                    filename,
-                    base64Length: base64Data.length,
-                    bufferSize: buffer.length,
-                    isValidPDF,
-                    firstBytes: buffer.slice(0, 10).toString('hex')
-                });
-            } catch (error) {
-                res.json({ error: 'Invalid base64 data', details: error.message });
-            }
-        } else {
-            res.json({ error: 'Content is not base64 PDF' });
-        }
+        res.json({
+            database: 'PostgreSQL',
+            stats,
+            checklistCount: checklists.length,
+            categories,
+            recentChecklists: checklists.slice(0, 5).map(c => ({
+                id: c.id,
+                title: c.title,
+                category: c.category,
+                created_at: c.created_at
+            }))
+        });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.json({ 
+            error: error.message, 
+            stack: error.stack,
+            database: 'Error connecting'
+        });
     }
 });
 
-// Debug endpoint to check checklist content
 app.get('/api/debug/checklist/:id', async (req, res) => {
     try {
         const { id } = req.params;
@@ -387,47 +342,92 @@ app.get('/api/debug/checklist/:id', async (req, res) => {
     }
 });
 
-// Temporary debug endpoint
-app.get('/api/debug', async (req, res) => {
+app.get('/api/test-download/:id', async (req, res) => {
     try {
-        const stats = await getStats();
-        const checklists = await getAllChecklists();
-        const categories = await getCategories();
+        const { id } = req.params;
+        const result = await getChecklist(id);
         
-        res.json({
-            database: 'PostgreSQL',
-            stats,
-            checklistCount: checklists.length,
-            categories,
-            recentChecklists: checklists.slice(0, 5).map(c => ({
-                id: c.id,
-                title: c.title,
-                category: c.category,
-                created_at: c.created_at
-            }))
-        });
+        if (!result || !result.data.content) {
+            return res.status(404).json({ error: 'No content found' });
+        }
+        
+        const content = result.data.content;
+        
+        if (content.startsWith('PDF_BASE64:')) {
+            const parts = content.split(':');
+            const filename = parts[1];
+            const base64Data = parts[2];
+            
+            try {
+                const buffer = Buffer.from(base64Data, 'base64');
+                const isValidPDF = buffer.slice(0, 5).toString() === '%PDF-';
+                
+                res.json({
+                    filename,
+                    base64Length: base64Data.length,
+                    bufferSize: buffer.length,
+                    isValidPDF,
+                    firstBytes: buffer.slice(0, 10).toString('hex')
+                });
+            } catch (error) {
+                res.json({ error: 'Invalid base64 data', details: error.message });
+            }
+        } else {
+            res.json({ error: 'Content is not base64 PDF' });
+        }
     } catch (error) {
-        res.json({ 
-            error: error.message, 
-            stack: error.stack,
-            database: 'Error connecting'
-        });
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Static files - AFTER API routes
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Admin routes
+const adminRoutes = require('./admin-routes');
+app.use('/admin', adminRoutes);
+
+// Catch-all route - MUST BE LAST
+app.get('*', (req, res) => {
+    if (req.path.startsWith('/api/')) {
+        res.status(404).json({ error: 'Route not found' });
+    } else {
+        res.sendFile(path.join(__dirname, 'public', 'index.html'));
     }
 });
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-    console.error('Error:', err.stack);
-    res.status(500).json({ error: 'Something went wrong!' });
+    console.error('Server error:', err);
+    res.status(500).json({ error: 'Internal server error' });
 });
 
-// 404 handler
-app.use((req, res) => {
-    res.status(404).json({ error: 'Route not found' });
+// Initialize database on startup
+initializeDatabase().then(async () => {
+    console.log('Database initialized successfully');
+    
+    // Auto-seed if database is empty
+    const checklists = await getAllChecklists();
+    if (checklists.length === 0 && process.env.AUTO_SEED === 'true') {
+        console.log('Empty database detected. Running seed...');
+        const { seedChecklists } = require('./seed-checklists');
+        for (const checklist of seedChecklists) {
+            try {
+                await createChecklist(checklist);
+                console.log(`Seeded: ${checklist.title}`);
+            } catch (error) {
+                console.error(`Failed to seed ${checklist.title}:`, error);
+            }
+        }
+    }
+}).catch(err => {
+    console.error('Database initialization failed:', err);
 });
 
 // Start server
 app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-    console.log(`Admin panel at http://localhost:${PORT}/admin`);
+    console.log(`Server running on port ${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });
+
+module.exports = app;
