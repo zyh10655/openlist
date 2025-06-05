@@ -814,7 +814,7 @@
                         `;
                         downloadButton = `
                             <button class="btn-download zip-download" onclick="quickDownload(${checklist.id}, 'zip')">
-                                📦 Download ZIP Package
+                                📦 Download ZIP
                             </button>
                         `;
                     } else if (checklist.content.startsWith('PDF_BASE64:') || checklist.content.startsWith('PDF File:')) {
@@ -993,27 +993,14 @@
                 downloadBtn.disabled = true;
                 downloadBtn.innerHTML = '<span class="loading"></span> Downloading...';
                 
-                // Create download link
-                const downloadUrl = `${API_BASE}/checklists/${checklistId}/download?format=${format}`;
-                
-                // Create temporary link and trigger download
-                const link = document.createElement('a');
-                link.href = downloadUrl;
-                
-                // Set filename based on format
-                let filename = `${checklist.title.toLowerCase().replace(/\s+/g, '-')}-v${checklist.version}`;
-                if (format === 'zip') {
-                    filename += '.zip';
-                } else if (format === 'pdf') {
-                    filename += '.pdf';
-                } else if (format === 'markdown') {
-                    filename += '.md';
+                // Check if this is a direct file download (ZIP or PDF)
+                if (checklist.content && (checklist.content.startsWith('ZIP_BASE64:') || checklist.content.startsWith('PDF_BASE64:'))) {
+                    // Direct file download from base64 content
+                    await downloadDirectFile(checklist, format);
+                } else {
+                    // API-based download for generated files
+                    await downloadFromAPI(checklist, format);
                 }
-                
-                link.download = filename;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
                 
                 // Update UI
                 checklist.downloads += 1;
@@ -1042,7 +1029,101 @@
                 downloadBtn.innerHTML = originalText;
             }
         }
-
+        async function downloadDirectFile(checklist, format) {
+            try {
+                let base64Data = '';
+                let mimeType = '';
+                let fileExtension = '';
+                
+                if (checklist.content.startsWith('ZIP_BASE64:')) {
+                    base64Data = checklist.content.replace('ZIP_BASE64:', '');
+                    mimeType = 'application/zip';
+                    fileExtension = '.zip';
+                } else if (checklist.content.startsWith('PDF_BASE64:')) {
+                    base64Data = checklist.content.replace('PDF_BASE64:', '');
+                    mimeType = 'application/pdf';
+                    fileExtension = '.pdf';
+                } else {
+                    throw new Error('Unsupported file format');
+                }
+                
+                // Convert base64 to blob
+                const byteCharacters = atob(base64Data);
+                const byteNumbers = new Array(byteCharacters.length);
+                for (let i = 0; i < byteCharacters.length; i++) {
+                    byteNumbers[i] = byteCharacters.charCodeAt(i);
+                }
+                const byteArray = new Uint8Array(byteNumbers);
+                const blob = new Blob([byteArray], { type: mimeType });
+                
+                // Create download link
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `${checklist.title.toLowerCase().replace(/\s+/g, '-')}-v${checklist.version}${fileExtension}`;
+                
+                // Trigger download
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                // Clean up the URL object
+                window.URL.revokeObjectURL(url);
+                
+                console.log('Direct file download completed:', link.download);
+                
+            } catch (error) {
+                console.error('Direct file download failed:', error);
+                throw error;
+            }
+        }
+        
+        // New function to handle API-based downloads
+        async function downloadFromAPI(checklist, format) {
+            try {
+                const downloadUrl = `${API_BASE}/checklists/${checklist.id}/download?format=${format}`;
+                
+                // Fetch the file
+                const response = await fetch(downloadUrl);
+                if (!response.ok) {
+                    throw new Error(`Download failed: ${response.status} ${response.statusText}`);
+                }
+                
+                // Get the blob
+                const blob = await response.blob();
+                
+                // Create download link
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                
+                // Set filename based on format
+                let filename = `${checklist.title.toLowerCase().replace(/\s+/g, '-')}-v${checklist.version}`;
+                if (format === 'zip') {
+                    filename += '.zip';
+                } else if (format === 'pdf') {
+                    filename += '.pdf';
+                } else if (format === 'markdown') {
+                    filename += '.md';
+                }
+                
+                link.download = filename;
+                
+                // Trigger download
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                // Clean up the URL object
+                window.URL.revokeObjectURL(url);
+                
+                console.log('API download completed:', filename);
+                
+            } catch (error) {
+                console.error('API download failed:', error);
+                throw error;
+            }
+        }
         // Show toast notification
         function showToast(message, type = 'success') {
             const toast = document.getElementById('toast');
