@@ -278,6 +278,8 @@ async function updateChecklist(id, data) {
 // Delete checklist
 // Replace your deleteChecklist function in database.js with this:
 
+// Replace your deleteChecklist function in database.js with this:
+
 async function deleteChecklist(id) {
     const client = await pool.connect();
     
