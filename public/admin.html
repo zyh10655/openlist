@@ -417,7 +417,8 @@
             document.getElementById('modalTitle').textContent = 'Create New Checklist';
             document.getElementById('checklistForm').reset();
             document.getElementById('content').disabled = false;
-            uploadedPdfFile = null;
+            document.getElementById('filePreview').style.display = 'none';
+            uploadedFile = null;
             document.getElementById('checklistModal').style.display = 'block';
         }
         
@@ -440,21 +441,80 @@
             }
         }
         
-        let uploadedPdfFile = null;
+        // Updated file handling for both PDF and ZIP
+        let uploadedFile = null;
         
-        function handlePdfUpload(event) {
+        function handleFileUpload(event) {
             const file = event.target.files[0];
-            if (file && file.type === 'application/pdf') {
-                uploadedPdfFile = file;
-                document.getElementById('content').value = '[PDF Uploaded: ' + file.name + ']';
-                document.getElementById('content').disabled = true;
-                console.log('PDF file selected:', file.name, 'Size:', file.size);
-            } else {
-                alert('Please upload a valid PDF file');
-                event.target.value = '';
-                uploadedPdfFile = null;
-                document.getElementById('content').disabled = false;
+            const filePreview = document.getElementById('filePreview');
+            const contentTextarea = document.getElementById('content');
+            
+            if (!file) {
+                uploadedFile = null;
+                contentTextarea.disabled = false;
+                contentTextarea.value = '';
+                filePreview.style.display = 'none';
+                return;
             }
+            
+            const fileSize = (file.size / 1024 / 1024).toFixed(2); // MB
+            const maxSize = 50; // 50MB limit
+            
+            if (file.size > maxSize * 1024 * 1024) {
+                alert(`File too large! Please upload files smaller than ${maxSize}MB.`);
+                event.target.value = '';
+                return;
+            }
+            
+            if (file.type === 'application/pdf') {
+                uploadedFile = file;
+                contentTextarea.value = `[PDF Document: ${file.name}]`;
+                contentTextarea.disabled = true;
+                
+                filePreview.innerHTML = `
+                    <div style="background: #e3f2fd; padding: 1rem; border-radius: 5px; border-left: 4px solid #2196f3;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <span style="font-size: 1.5rem;">📄</span>
+                            <div>
+                                <strong>PDF Document</strong><br>
+                                <small>${file.name} (${fileSize} MB)</small>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                filePreview.style.display = 'block';
+                
+            } else if (file.type === 'application/zip' || 
+                       file.type === 'application/x-zip-compressed' ||
+                       file.name.toLowerCase().endsWith('.zip')) {
+                uploadedFile = file;
+                contentTextarea.value = `[ZIP Archive: ${file.name}]`;
+                contentTextarea.disabled = true;
+                
+                filePreview.innerHTML = `
+                    <div style="background: #f3e5f5; padding: 1rem; border-radius: 5px; border-left: 4px solid #9c27b0;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <span style="font-size: 1.5rem;">📦</span>
+                            <div>
+                                <strong>ZIP Archive</strong><br>
+                                <small>${file.name} (${fileSize} MB)</small><br>
+                                <em style="color: #666;">Contains multiple files and templates</em>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                filePreview.style.display = 'block';
+                
+            } else {
+                alert('Please upload a PDF or ZIP file only.');
+                event.target.value = '';
+                uploadedFile = null;
+                contentTextarea.disabled = false;
+                filePreview.style.display = 'none';
+                return;
+            }
+            
+            console.log('File selected:', file.name, 'Type:', file.type, 'Size:', fileSize + 'MB');
         }
         
         document.getElementById('checklistForm').addEventListener('submit', async (e) => {
@@ -467,10 +527,17 @@
             formData.append('category', document.getElementById('category').value);
             formData.append('features', document.getElementById('features').value);
             
-            // If PDF is uploaded, send it; otherwise send markdown content
-            if (uploadedPdfFile) {
-                formData.append('pdfFile', uploadedPdfFile);
-                console.log('Submitting with PDF file:', uploadedPdfFile.name);
+            // Handle file upload based on type
+            if (uploadedFile) {
+                if (uploadedFile.type === 'application/pdf') {
+                    formData.append('pdfFile', uploadedFile);
+                    console.log('Submitting with PDF file:', uploadedFile.name);
+                } else if (uploadedFile.type === 'application/zip' || 
+                          uploadedFile.type === 'application/x-zip-compressed' ||
+                          uploadedFile.name.toLowerCase().endsWith('.zip')) {
+                    formData.append('zipFile', uploadedFile);
+                    console.log('Submitting with ZIP file:', uploadedFile.name);
+                }
             } else {
                 formData.append('content', document.getElementById('content').value);
                 console.log('Submitting with markdown content');
@@ -478,7 +545,7 @@
             
             try {
                 console.log('Submitting to /admin/checklists');
-                const response = await fetch('/admin/checklists', {  // ✅ FIXED: Removed /api/
+                const response = await fetch('/admin/checklists', {
                     method: 'POST',
                     headers: {
                         'X-Admin-Key': adminKey
@@ -501,7 +568,8 @@
                 // Reset form and file
                 document.getElementById('checklistForm').reset();
                 document.getElementById('content').disabled = false;
-                uploadedPdfFile = null;
+                document.getElementById('filePreview').style.display = 'none';
+                uploadedFile = null;
             } catch (error) {
                 console.error('Submit error details:', error);
                 alert('Failed to create checklist: ' + error.message);
