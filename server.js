@@ -37,7 +37,6 @@ app.use(express.urlencoded({ extended: true }));
 
 // API Routes - IMPORTANT: These must come before static file serving
 
-// Get all checklists
 app.get('/api/checklists', async (req, res) => {
     try {
         const checklists = await getAllChecklists();
@@ -438,7 +437,7 @@ app.get('*', (req, res) => {
     }
 });
 
-// Error handling middleware
+// Error handling
 app.use((err, req, res, next) => {
     console.error('Server error:', err);
     res.status(500).json({ error: 'Internal server error' });
@@ -447,8 +446,7 @@ app.use((err, req, res, next) => {
 // Initialize database on startup
 initializeDatabase().then(async () => {
     console.log('Database initialized successfully');
-    
-    // Auto-seed if database is empty
+
     const checklists = await getAllChecklists();
     if (checklists.length === 0 && process.env.AUTO_SEED === 'true') {
         console.log('Empty database detected. Running seed...');
