@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OpenChecklist - Free Professional Industry Checklists</title>
+    <title>OpenChecklist - Free Professional Checklists for Everyone</title>
     <style>
         * {
             margin: 0;
@@ -12,67 +12,128 @@
         }
 
         :root {
-            --primary-color: #10b981;
-            --secondary-color: #059669;
-            --accent-color: #3b82f6;
-            --text-dark: #1f2937;
-            --text-light: #6b7280;
-            --bg-light: #f9fafb;
-            --border-color: #e5e7eb;
-            --warning-color: #f59e0b;
+            --primary: #10b981;
+            --primary-dark: #059669;
+            --secondary: #3b82f6;
+            --accent: #8b5cf6;
+            --dark: #0f172a;
+            --light: #f8fafc;
+            --glass: rgba(255, 255, 255, 0.1);
+            --shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
         }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            line-height: 1.6;
-            color: var(--text-dark);
-            background-color: #ffffff;
+            background: var(--dark);
+            color: #333;
+            overflow-x: hidden;
         }
 
-        .container {
+        /* Animated Background */
+        .hero-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #4facfe 75%, #00f2fe 100%);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+            opacity: 0.9;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Floating Shapes */
+        .shape {
+            position: absolute;
+            opacity: 0.1;
+        }
+
+        .shape-1 {
+            width: 300px;
+            height: 300px;
+            background: linear-gradient(45deg, #f093fb, #f5576c);
+            border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
+            top: -150px;
+            right: -150px;
+            animation: float 20s infinite ease-in-out;
+        }
+
+        .shape-2 {
+            width: 200px;
+            height: 200px;
+            background: linear-gradient(45deg, #4facfe, #00f2fe);
+            border-radius: 70% 30% 30% 70% / 70% 70% 30% 30%;
+            bottom: -100px;
+            left: -100px;
+            animation: float 15s infinite ease-in-out reverse;
+        }
+
+        .shape-3 {
+            width: 150px;
+            height: 150px;
+            background: linear-gradient(45deg, #fa709a, #fee140);
+            border-radius: 50%;
+            top: 50%;
+            left: 10%;
+            animation: pulse 4s infinite ease-in-out;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            33% { transform: translateY(-30px) rotate(120deg); }
+            66% { transform: translateY(30px) rotate(240deg); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.1; }
+            50% { transform: scale(1.1); opacity: 0.2; }
+        }
+
+        /* Navigation */
+        nav {
+            position: relative;
+            z-index: 1000;
+            background: var(--glass);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            transition: all 0.3s ease;
+        }
+
+        nav.scrolled {
+            background: rgba(15, 23, 42, 0.95);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .nav-container {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 0 20px;
-        }
-
-        /* Loading Spinner */
-        .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(255,255,255,.3);
-            border-radius: 50%;
-            border-top-color: white;
-            animation: spin 1s ease-in-out infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        /* Header Styles */
-        header {
-            background: #fff;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-
-        nav {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 1rem 0;
         }
 
         .logo {
             font-size: 1.5rem;
             font-weight: bold;
-            color: var(--primary-color);
+            color: white;
+            text-decoration: none;
             display: flex;
             align-items: center;
             gap: 0.5rem;
+            transition: transform 0.3s ease;
+        }
+
+        .logo:hover {
+            transform: scale(1.05);
         }
 
         .nav-links {
@@ -82,1010 +143,969 @@
         }
 
         .nav-links a {
+            color: white;
             text-decoration: none;
-            color: var(--text-dark);
-            transition: color 0.3s;
+            transition: all 0.3s ease;
+            position: relative;
         }
 
-        .nav-links a:hover {
-            color: var(--primary-color);
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--primary);
+            transition: width 0.3s ease;
         }
 
-        .nav-buttons {
-            display: flex;
-            gap: 1rem;
-            align-items: center;
+        .nav-links a:hover::after {
+            width: 100%;
         }
 
         /* Hero Section */
         .hero {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            color: white;
-            padding: 4rem 0;
+            position: relative;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             text-align: center;
+            color: white;
+            padding: 2rem;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 10;
+            max-width: 800px;
+            animation: fadeInUp 1s ease;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .hero h1 {
-            font-size: 3rem;
+            font-size: 4rem;
+            font-weight: 800;
             margin-bottom: 1rem;
+            background: linear-gradient(to right, #fff, #e0e0e0);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: shimmer 3s ease infinite;
+        }
+
+        @keyframes shimmer {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
         }
 
         .hero p {
-            font-size: 1.25rem;
+            font-size: 1.5rem;
             margin-bottom: 2rem;
             opacity: 0.9;
         }
 
-        .btn {
-            display: inline-block;
-            padding: 0.75rem 2rem;
-            background: white;
-            color: var(--primary-color);
-            text-decoration: none;
-            border-radius: 5px;
-            transition: transform 0.3s, box-shadow 0.3s;
-            border: none;
-            cursor: pointer;
-            font-size: 1rem;
-            font-weight: 600;
+        .cta-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
         }
 
-        .btn:hover {
+        .btn {
+            padding: 1rem 2rem;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: inline-block;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            box-shadow: 0 5px 15px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            box-shadow: 0 10px 25px rgba(16, 185, 129, 0.4);
         }
 
         .btn-secondary {
-            background: transparent;
+            background: var(--glass);
             color: white;
-            border: 2px solid white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(10px);
         }
 
         .btn-secondary:hover {
-            background: white;
-            color: var(--primary-color);
-        }
-
-        .btn-donate {
-            background: var(--warning-color);
-            color: white;
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
         }
 
         /* Stats Section */
         .stats {
-            padding: 3rem 0;
-            background: var(--bg-light);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 4rem 2rem;
+            position: relative;
+            overflow: hidden;
         }
 
-        .stats-grid {
+        .stats::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, var(--primary) 0%, transparent 70%);
+            opacity: 0.05;
+            animation: rotate 30s linear infinite;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .stats-container {
+            max-width: 1200px;
+            margin: 0 auto;
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 2rem;
-            text-align: center;
+            position: relative;
+            z-index: 1;
         }
 
-        .stat-item h3 {
-            font-size: 2.5rem;
-            color: var(--primary-color);
+        .stat-card {
+            text-align: center;
+            padding: 2rem;
+            background: white;
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-10px) scale(1.05);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .stat-number {
+            font-size: 3rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
             margin-bottom: 0.5rem;
+            display: block;
+            animation: countUp 2s ease;
         }
 
-        /* Checklists Grid */
-        .checklists {
-            padding: 4rem 0;
-        }
-
-        .section-title {
-            text-align: center;
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
-            color: var(--text-dark);
-        }
-
-        .section-subtitle {
-            text-align: center;
-            color: var(--text-light);
-            margin-bottom: 3rem;
+        .stat-label {
+            color: #64748b;
             font-size: 1.1rem;
         }
 
+        /* Checklists Section */
+        .checklists-section {
+            padding: 6rem 2rem;
+            background: #f8fafc;
+            position: relative;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 4rem;
+        }
+
+        .section-header h2 {
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, var(--dark), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
         .checklists-grid {
+            max-width: 1200px;
+            margin: 0 auto;
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
             gap: 2rem;
         }
 
         .checklist-card {
             background: white;
-            border-radius: 10px;
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: var(--shadow);
+            transition: all 0.3s ease;
+            position: relative;
             overflow: hidden;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            transition: transform 0.3s, box-shadow 0.3s;
-            border: 1px solid var(--border-color);
+            cursor: pointer;
+        }
+
+        .checklist-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.3s ease;
+        }
+
+        .checklist-card:hover::before {
+            transform: scaleX(1);
         }
 
         .checklist-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
-        }
-
-        .checklist-header {
-            background: var(--bg-light);
-            padding: 1.5rem;
-            text-align: center;
-            position: relative;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
         }
 
         .checklist-icon {
             font-size: 3rem;
-            margin-bottom: 0.5rem;
+            margin-bottom: 1rem;
+            display: inline-block;
+            animation: bounce 2s infinite;
         }
 
-        /* File Type Badges */
-        .file-type-badge {
-            position: absolute;
-            top: 0.5rem;
-            right: 0.5rem;
-            padding: 0.25rem 0.5rem;
-            border-radius: 12px;
-            font-size: 0.75rem;
-            font-weight: bold;
-            z-index: 2;
-        }
-
-        .zip-badge {
-            background: linear-gradient(135deg, #9c27b0, #673ab7);
-            color: white;
-        }
-
-        .pdf-badge {
-            background: linear-gradient(135deg, #2196f3, #1976d2);
-            color: white;
-        }
-
-        /* File Info Boxes */
-        .file-info-box {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            padding: 1.5rem;
-            border-radius: 8px;
-            margin-bottom: 2rem;
-        }
-
-        .zip-info {
-            background: linear-gradient(135deg, #f3e5f5, #e1bee7);
-            border-left: 4px solid #9c27b0;
-        }
-
-        .pdf-info {
-            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
-            border-left: 4px solid #2196f3;
-        }
-
-        .file-icon {
-            font-size: 3rem;
-            line-height: 1;
-        }
-
-        .file-details h4 {
-            margin: 0 0 0.5rem 0;
-            color: var(--text-dark);
-        }
-
-        .file-details p {
-            margin: 0 0 0.25rem 0;
-            color: var(--text-dark);
-        }
-
-        .file-details small {
-            color: var(--text-light);
-            font-style: italic;
-        }
-
-        .checklist-info {
-            padding: 1.5rem;
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
         }
 
         .checklist-title {
-            font-size: 1.25rem;
+            font-size: 1.5rem;
+            font-weight: 700;
             margin-bottom: 0.5rem;
-            color: var(--text-dark);
+            color: var(--dark);
+        }
+
+        .checklist-category {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            padding: 0.25rem 1rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            margin-bottom: 1rem;
         }
 
         .checklist-description {
-            color: var(--text-light);
-            margin-bottom: 1rem;
-            font-size: 0.95rem;
+            color: #64748b;
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
         }
 
-        .checklist-meta {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
-            font-size: 0.9rem;
-            color: var(--text-light);
+        .checklist-features {
+            list-style: none;
+            margin-bottom: 1.5rem;
         }
 
-        .checklist-stats {
-            display: flex;
-            gap: 1rem;
-            margin-bottom: 1rem;
+        .checklist-features li {
+            padding: 0.5rem 0;
+            padding-left: 1.5rem;
+            position: relative;
+            color: #64748b;
         }
 
-        .stat-badge {
-            display: flex;
-            align-items: center;
-            gap: 0.25rem;
-            font-size: 0.9rem;
-            color: var(--text-light);
+        .checklist-features li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: var(--primary);
+            font-weight: bold;
         }
 
-        .checklist-actions {
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        .checklist-actions button {
-            flex: 1;
-            padding: 0.5rem;
-            border: 1px solid var(--border-color);
-            background: white;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .checklist-actions button:hover {
-            background: var(--bg-light);
-        }
-
-        .btn-download {
-            background: var(--primary-color) !important;
-            color: white !important;
-            border: none !important;
-        }
-
-        .btn-download:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        .zip-download {
-            background: linear-gradient(135deg, #9c27b0, #673ab7) !important;
-        }
-
-        .pdf-download {
-            background: linear-gradient(135deg, #2196f3, #1976d2) !important;
-        }
-
-        /* Format Buttons */
-        .format-buttons {
-            display: flex;
-            gap: 0.5rem;
-            flex-wrap: wrap;
-            margin-top: 1rem;
-        }
-
-        .format-btn {
-            padding: 0.5rem 1rem;
-            background: white;
-            border: 1px solid var(--border-color);
-            border-radius: 5px;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-size: 0.9rem;
-        }
-
-        .format-btn:hover {
-            background: var(--primary-color);
-            color: white;
-            border-color: var(--primary-color);
-        }
-
-        .format-btn.zip-btn {
-            background: linear-gradient(135deg, #9c27b0, #673ab7);
+        .download-btn {
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
             color: white;
             border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
         }
 
-        .format-btn.pdf-btn {
-            background: linear-gradient(135deg, #2196f3, #1976d2);
-            color: white;
-            border: none;
+        .download-btn::after {
+            content: '↓';
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.2rem;
+            transition: transform 0.3s ease;
+        }
+
+        .download-btn:hover::after {
+            transform: translateY(-50%) translateX(5px);
+        }
+
+        .download-btn:hover {
+            transform: scale(1.02);
+            box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3);
         }
 
         /* Community Section */
-        .community {
-            padding: 4rem 0;
-            background: var(--bg-light);
+        .community-section {
+            padding: 6rem 2rem;
+            background: linear-gradient(135deg, var(--dark), #1e293b);
+            color: white;
+            position: relative;
+            overflow: hidden;
         }
 
-        .community-features {
+        .community-grid {
+            max-width: 1200px;
+            margin: 0 auto;
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
-            margin-top: 3rem;
+            gap: 3rem;
+            position: relative;
+            z-index: 1;
         }
 
         .community-card {
-            background: white;
-            padding: 2rem;
-            border-radius: 10px;
             text-align: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            padding: 3rem 2rem;
+            background: var(--glass);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .community-card:hover {
+            transform: translateY(-10px);
+            background: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
         }
 
         .community-icon {
-            font-size: 3rem;
+            font-size: 4rem;
             margin-bottom: 1rem;
-            color: var(--primary-color);
+            display: inline-block;
+            filter: drop-shadow(0 5px 10px rgba(0, 0, 0, 0.3));
         }
 
-        /* Contribute Section */
-        .contribute {
-            padding: 4rem 0;
+        .community-title {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .community-description {
+            opacity: 0.8;
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+
+        /* Contribution Section */
+        .contribute-section {
+            padding: 6rem 2rem;
             background: white;
+            position: relative;
         }
 
-        .contribute-options {
+        .contribute-grid {
+            max-width: 1200px;
+            margin: 0 auto;
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 2rem;
-            margin-top: 3rem;
         }
 
         .contribute-card {
-            padding: 2rem;
-            border: 2px solid var(--border-color);
-            border-radius: 10px;
             text-align: center;
-            transition: all 0.3s;
+            padding: 2rem;
+            border-radius: 20px;
+            border: 2px solid #e5e7eb;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .contribute-card::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: radial-gradient(circle, var(--primary) 0%, transparent 70%);
+            transition: all 0.5s ease;
+            transform: translate(-50%, -50%);
+        }
+
+        .contribute-card:hover::before {
+            width: 300px;
+            height: 300px;
+            opacity: 0.1;
         }
 
         .contribute-card:hover {
-            border-color: var(--primary-color);
             transform: translateY(-5px);
+            border-color: var(--primary);
+            box-shadow: 0 10px 30px rgba(16, 185, 129, 0.2);
         }
 
-        /* Modal */
-        .modal {
-            display: none;
+        .contribute-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            transition: transform 0.3s ease;
+        }
+
+        .contribute-card:hover .contribute-icon {
+            transform: scale(1.2) rotate(5deg);
+        }
+
+        /* Footer */
+        footer {
+            background: var(--dark);
+            color: white;
+            padding: 4rem 2rem 2rem;
+            position: relative;
+        }
+
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 3rem;
+            margin-bottom: 3rem;
+        }
+
+        .footer-section h3 {
+            margin-bottom: 1rem;
+            color: var(--primary);
+        }
+
+        .footer-links {
+            list-style: none;
+        }
+
+        .footer-links li {
+            margin-bottom: 0.5rem;
+        }
+
+        .footer-links a {
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .footer-links a:hover {
+            color: var(--primary);
+        }
+
+        .footer-bottom {
+            text-align: center;
+            padding-top: 2rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        /* Newsletter Form */
+        .newsletter-form {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .newsletter-input {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            border-radius: 50px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        .newsletter-input:focus {
+            outline: none;
+            background: rgba(255, 255, 255, 0.2);
+            border-color: var(--primary);
+        }
+
+        .newsletter-btn {
+            padding: 0.75rem 1.5rem;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .newsletter-btn:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(16, 185, 129, 0.3);
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+            
+            .hero p {
+                font-size: 1.2rem;
+            }
+            
+            .nav-links {
+                display: none;
+            }
+            
+            .checklists-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        /* Loading Animation */
+        .loader {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.5);
-            z-index: 1000;
-            overflow-y: auto;
-        }
-
-        .modal-content {
-            background: white;
-            max-width: 800px;
-            margin: 2rem auto;
-            border-radius: 10px;
-            padding: 2rem;
-            position: relative;
-        }
-
-        .close-modal {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            font-size: 2rem;
-            cursor: pointer;
-            color: var(--text-light);
-        }
-
-        /* Toast Notification */
-        .toast {
-            position: fixed;
-            bottom: 2rem;
-            right: 2rem;
-            background: var(--primary-color);
-            color: white;
-            padding: 1rem 2rem;
-            border-radius: 5px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-            transform: translateY(100px);
-            opacity: 0;
-            transition: all 0.3s;
-            z-index: 1001;
-        }
-
-        .toast.show {
-            transform: translateY(0);
-            opacity: 1;
-        }
-
-        /* Footer */
-        footer {
-            background: var(--text-dark);
-            color: white;
-            padding: 3rem 0;
-            text-align: center;
-        }
-
-        .footer-content {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 2rem;
-            margin-bottom: 2rem;
-        }
-
-        .footer-section h4 {
-            margin-bottom: 1rem;
-        }
-
-        .footer-section a {
-            color: #9ca3af;
-            text-decoration: none;
-            display: block;
-            padding: 0.25rem 0;
-        }
-
-        .footer-section a:hover {
-            color: white;
-        }
-
-        .open-source-badge {
-            display: inline-flex;
+            background: var(--dark);
+            display: flex;
+            justify-content: center;
             align-items: center;
-            gap: 0.5rem;
-            background: var(--primary-color);
-            color: white;
-            padding: 0.5rem 1rem;
-            border-radius: 5px;
-            margin-top: 1rem;
+            z-index: 9999;
+            transition: opacity 0.5s ease;
         }
 
-        /* Responsive */
-        @media (max-width: 768px) {
-            .nav-links {
-                display: none;
-            }
-            
-            .hero h1 {
-                font-size: 2rem;
-            }
-            
-            .checklist-actions {
-                flex-direction: column;
-            }
+        .loader.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .loader-circle {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
     </style>
 </head>
 <body>
-    <!-- Header -->
-    <header>
-        <nav class="container">
-            <div class="logo">
-                <span>🌟</span> OpenChecklist
-            </div>
+    <!-- Loader -->
+    <div class="loader" id="loader">
+        <div class="loader-circle"></div>
+    </div>
+
+    <!-- Navigation -->
+    <nav id="navbar">
+        <div class="nav-container">
+            <a href="#" class="logo">
+                <span style="font-size: 2rem;">🚀</span>
+                OpenChecklist
+            </a>
             <ul class="nav-links">
                 <li><a href="#home">Home</a></li>
-                <li><a href="#checklists">Browse</a></li>
+                <li><a href="#browse">Browse</a></li>
                 <li><a href="#community">Community</a></li>
                 <li><a href="#contribute">Contribute</a></li>
+                <li><a href="#contact">Contact</a></li>
             </ul>
-            <div class="nav-buttons">
-                <button class="btn btn-donate" onclick="showDonateModal()">❤️ Support Us</button>
-            </div>
-        </nav>
-    </header>
+        </div>
+    </nav>
 
     <!-- Hero Section -->
     <section class="hero" id="home">
-        <div class="container">
+        <div class="hero-bg"></div>
+        <div class="shape shape-1"></div>
+        <div class="shape shape-2"></div>
+        <div class="shape shape-3"></div>
+        
+        <div class="hero-content">
             <h1>Free Professional Checklists for Everyone</h1>
             <p>Open-source, community-driven checklists to help you succeed in any industry</p>
-            <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
-                <a href="#checklists" class="btn">Browse Checklists</a>
-                <a href="#contribute" class="btn btn-secondary">Contribute</a>
+            <div class="cta-buttons">
+                <a href="#browse" class="btn btn-primary">Browse Checklists</a>
+                <a href="#contribute" class="btn btn-secondary">Start Contributing</a>
             </div>
         </div>
     </section>
 
     <!-- Stats Section -->
     <section class="stats">
-        <div class="container">
-            <div class="stats-grid">
-                <div class="stat-item">
-                    <h3 id="checklistCount">-</h3>
-                    <p>Free Checklists</p>
-                </div>
-                <div class="stat-item">
-                    <h3 id="downloadCount">-</h3>
-                    <p>Downloads</p>
-                </div>
-                <div class="stat-item">
-                    <h3 id="contributorCount">-</h3>
-                    <p>Contributors</p>
-                </div>
-                <div class="stat-item">
-                    <h3 id="updateCount">-</h3>
-                    <p>Updates</p>
-                </div>
+        <div class="stats-container">
+            <div class="stat-card">
+                <span class="stat-number" data-target="157">0</span>
+                <span class="stat-label">Total Checklists</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-number" data-target="3842">0</span>
+                <span class="stat-label">Downloads</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-number" data-target="24">0</span>
+                <span class="stat-label">Categories</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-number" data-target="892">0</span>
+                <span class="stat-label">Contributors</span>
             </div>
         </div>
     </section>
 
     <!-- Checklists Section -->
-    <section class="checklists" id="checklists">
-        <div class="container">
-            <h2 class="section-title">Browse Free Checklists</h2>
-            <p class="section-subtitle">All checklists are free to download, modify, and share</p>
-            <div class="checklists-grid" id="checklistsGrid">
-                <!-- Checklists will be dynamically loaded here -->
+    <section class="checklists-section" id="browse">
+        <div class="section-header">
+            <h2>Browse Free Checklists</h2>
+            <p>Professional-grade resources to launch and scale your business</p>
+        </div>
+        
+        <div class="checklists-grid">
+            <div class="checklist-card">
+                <div class="checklist-icon">🚀</div>
+                <h3 class="checklist-title">Complete Product Production Workflow Guide</h3>
+                <span class="checklist-category">Business</span>
+                <p class="checklist-description">The most comprehensive product production checklist available online. From ideation to launch, we've got you covered with proven strategies.</p>
+                <ul class="checklist-features">
+                    <li>Step-by-step production workflow</li>
+                    <li>Quality control checklists</li>
+                    <li>Supplier evaluation forms</li>
+                    <li>Cost calculation templates</li>
+                </ul>
+                <button class="download-btn">Download Now</button>
+            </div>
+
+            <div class="checklist-card">
+                <div class="checklist-icon">🏗️</div>
+                <h3 class="checklist-title">Cannabis Therapy Practice Launch Checklist for New Zealand</h3>
+                <span class="checklist-category">Healthcare</span>
+                <p class="checklist-description">Navigate the complex regulatory landscape of cannabis therapy in New Zealand with our comprehensive checklist and templates.</p>
+                <ul class="checklist-features">
+                    <li>Regulatory compliance guide</li>
+                    <li>License application templates</li>
+                    <li>Patient intake forms</li>
+                    <li>Legal requirement checklist</li>
+                </ul>
+                <button class="download-btn">Download Now</button>
+            </div>
+
+            <div class="checklist-card">
+                <div class="checklist-icon">🛍️</div>
+                <h3 class="checklist-title">Specialty Retail Shop in New Zealand</h3>
+                <span class="checklist-category">Retail</span>
+                <p class="checklist-description">Everything you need to open your dream retail shop in New Zealand. From permits to grand opening, we've mapped out every step.</p>
+                <ul class="checklist-features">
+                    <li>NZ business registration guide</li>
+                    <li>Retail space evaluation checklist</li>
+                    <li>Inventory management templates</li>
+                    <li>Marketing launch plan</li>
+                </ul>
+                <button class="download-btn">Download Now</button>
             </div>
         </div>
     </section>
 
     <!-- Community Section -->
-    <section class="community" id="community">
-        <div class="container">
-            <h2 class="section-title">Join Our Community</h2>
-            <p class="section-subtitle">Built by professionals, for professionals</p>
-            <div class="community-features">
-                <div class="community-card">
-                    <div class="community-icon">💬</div>
-                    <h3>Discussion Forum</h3>
-                    <p>Ask questions, share experiences, and connect with others in your industry</p>
-                    <button class="btn" style="margin-top: 1rem;">Join Forum</button>
-                </div>
-                <div class="community-card">
-                    <div class="community-icon">🔄</div>
-                    <h3>Weekly Updates</h3>
-                    <p>Get notified about new checklists, updates, and community highlights</p>
-                    <button class="btn" style="margin-top: 1rem;">Subscribe</button>
-                </div>
-                <div class="community-card">
-                    <div class="community-icon">🎯</div>
-                    <h3>Success Stories</h3>
-                    <p>Read how others have used our checklists to achieve their goals</p>
-                    <button class="btn" style="margin-top: 1rem;">Read Stories</button>
-                </div>
+    <section class="community-section" id="community">
+        <div class="section-header">
+            <h2 style="color: white;">Join Our Community</h2>
+            <p style="color: rgba(255,255,255,0.8);">Connect, share, and grow with entrepreneurs worldwide</p>
+        </div>
+        
+        <div class="community-grid">
+            <div class="community-card">
+                <div class="community-icon">💬</div>
+                <h3 class="community-title">Discussion Forum</h3>
+                <p class="community-description">Ask questions, share experiences, and get advice from successful entrepreneurs</p>
+                <a href="#" class="btn btn-primary">Join Forum</a>
+            </div>
+
+            <div class="community-card">
+                <div class="community-icon">📅</div>
+                <h3 class="community-title">Weekly Updates</h3>
+                <p class="community-description">Get the latest checklists and business insights delivered to your inbox</p>
+                <a href="#" class="btn btn-primary">Subscribe</a>
+            </div>
+
+            <div class="community-card">
+                <div class="community-icon">🎯</div>
+                <h3 class="community-title">Success Stories</h3>
+                <p class="community-description">Learn from others who've used our checklists to build successful businesses</p>
+                <a href="#" class="btn btn-primary">Read Stories</a>
             </div>
         </div>
     </section>
 
-    <!-- Contribute Section -->
-    <section class="contribute" id="contribute">
-        <div class="container">
-            <h2 class="section-title">Ways to Contribute</h2>
-            <p class="section-subtitle">Help us build the world's best collection of professional checklists</p>
-            <div class="contribute-options">
-                <div class="contribute-card">
-                    <h3>📝 Create Checklists</h3>
-                    <p>Share your expertise by creating new checklists for your industry</p>
-                </div>
-                <div class="contribute-card">
-                    <h3>🔍 Review & Improve</h3>
-                    <p>Help review and improve existing checklists with your knowledge</p>
-                </div>
-                <div class="contribute-card">
-                    <h3>🌐 Translate</h3>
-                    <p>Make checklists accessible globally by translating them</p>
-                </div>
-                <div class="contribute-card">
-                    <h3>💰 Sponsor</h3>
-                    <p>Support our infrastructure and community initiatives</p>
-                </div>
+    <!-- Contribution Section -->
+    <section class="contribute-section" id="contribute">
+        <div class="section-header">
+            <h2>Ways to Contribute</h2>
+            <p>Help us build the world's best collection of business checklists</p>
+        </div>
+        
+        <div class="contribute-grid">
+            <div class="contribute-card">
+                <div class="contribute-icon">✍️</div>
+                <h3>Create Checklists</h3>
+                <p>Share your expertise by creating new checklists for the community</p>
+            </div>
+
+            <div class="contribute-card">
+                <div class="contribute-icon">🔍</div>
+                <h3>Review & Improve</h3>
+                <p>Help improve existing checklists with your knowledge and experience</p>
+            </div>
+
+            <div class="contribute-card">
+                <div class="contribute-icon">🌐</div>
+                <h3>Translate</h3>
+                <p>Make checklists accessible globally by translating them</p>
+            </div>
+
+            <div class="contribute-card">
+                <div class="contribute-icon">💡</div>
+                <h3>Sponsor</h3>
+                <p>Support our mission to provide free resources for entrepreneurs</p>
             </div>
         </div>
     </section>
 
     <!-- Footer -->
     <footer>
-        <div class="container">
-            <div class="footer-content">
-                <div class="footer-section">
-                    <h4>Resources</h4>
-                    <a href="#">All Checklists</a>
-                    <a href="#">Templates</a>
-                    <a href="#">Guides</a>
-                    <a href="#">API Access</a>
-                </div>
-                <div class="footer-section">
-                    <h4>Community</h4>
-                    <a href="#">Forum</a>
-                    <a href="#">Contributors</a>
-                    <a href="#">Success Stories</a>
-                    <a href="#">Newsletter</a>
-                </div>
-                <div class="footer-section">
-                    <h4>About</h4>
-                    <a href="#">Mission</a>
-                    <a href="#">Open Source</a>
-                    <a href="#">Privacy</a>
-                    <a href="#">Terms</a>
-                </div>
-                <div class="footer-section">
-                    <h4>Connect</h4>
-                    <a href="#">GitHub</a>
-                    <a href="#">Twitter</a>
-                    <a href="#">Discord</a>
-                    <a href="#">Email</a>
-                </div>
+        <div class="footer-content">
+            <div class="footer-section">
+                <h3>Business</h3>
+                <ul class="footer-links">
+                    <li><a href="#">Start a Business</a></li>
+                    <li><a href="#">Business Plans</a></li>
+                    <li><a href="#">Legal Forms</a></li>
+                    <li><a href="#">Operations</a></li>
+                </ul>
             </div>
-            <div class="open-source-badge">
-                <span>🔓</span>
-                <span>Open Source • CC BY 4.0</span>
+
+            <div class="footer-section">
+                <h3>Community</h3>
+                <ul class="footer-links">
+                    <li><a href="#">Forum</a></li>
+                    <li><a href="#">Discord Server</a></li>
+                    <li><a href="#">Success Stories</a></li>
+                    <li><a href="#">Events</a></li>
+                </ul>
             </div>
-            <p style="margin-top: 2rem; color: #9ca3af;">Made with ❤️ by the OpenChecklist Community</p>
+
+            <div class="footer-section">
+                <h3>About</h3>
+                <ul class="footer-links">
+                    <li><a href="#">Our Mission</a></li>
+                    <li><a href="#">Team</a></li>
+                    <li><a href="#">Blog</a></li>
+                    <li><a href="#">Press</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-section">
+                <h3>Stay Updated</h3>
+                <p style="margin-bottom: 1rem; opacity: 0.8;">Get the latest checklists and tips</p>
+                <form class="newsletter-form">
+                    <input type="email" placeholder="Your email" class="newsletter-input">
+                    <button type="submit" class="newsletter-btn">→</button>
+                </form>
+            </div>
+        </div>
+        
+        <div class="footer-bottom">
+            <p>&copy; 2024 OpenChecklist. Made with ❤️ by the global business community</p>
         </div>
     </footer>
 
-    <!-- Checklist Detail Modal -->
-    <div class="modal" id="checklistModal">
-        <div class="modal-content">
-            <span class="close-modal" onclick="closeModal()">&times;</span>
-            <div id="modalContent">
-                <!-- Checklist details will be loaded here -->
-            </div>
-        </div>
-    </div>
-
-    <!-- Donate Modal -->
-    <div class="modal" id="donateModal">
-        <div class="modal-content">
-            <span class="close-modal" onclick="closeDonateModal()">&times;</span>
-            <div style="text-align: center;">
-                <h2 style="margin-bottom: 1rem;">Support OpenChecklist</h2>
-                <p style="margin-bottom: 2rem; color: var(--text-light);">
-                    Your donation helps us maintain servers, improve checklists, and support our community.
-                </p>
-                <div style="display: grid; gap: 1rem; max-width: 400px; margin: 0 auto;">
-                    <button class="btn" style="padding: 1rem;">$5 - Buy us a coffee</button>
-                    <button class="btn" style="padding: 1rem;">$25 - Support monthly hosting</button>
-                    <button class="btn" style="padding: 1rem;">$100 - Sponsor new checklist</button>
-                    <button class="btn" style="padding: 1rem;">Custom amount</button>
-                </div>
-                <p style="margin-top: 2rem; font-size: 0.9rem; color: var(--text-light);">
-                    All donations are processed securely. You'll receive a receipt and our eternal gratitude! 💚
-                </p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Toast Notification -->
-    <div class="toast" id="toast">
-        <span id="toastMessage">Download started!</span>
-    </div>
-
     <script>
-        // API Configuration
-        const API_BASE = 'https://www.businessopenchecklist.org/api';
-
-        // State
-        let checklists = [];
-
-        // Initialize the app
-        async function init() {
-            await loadChecklists();
-            await loadStats();
-        }
-
-        // Load checklists from API
-        async function loadChecklists() {
-            try {
-                const response = await fetch(`${API_BASE}/checklists`);
-                checklists = await response.json();
-                renderChecklists();
-            } catch (error) {
-                console.error('Failed to load checklists:', error);
-                showToast('Failed to load checklists. Please try again later.', 'error');
-            }
-        }
-
-        // Load statistics
-        async function loadStats() {
-            try {
-                const response = await fetch(`${API_BASE}/stats`);
-                const stats = await response.json();
-                
-                document.getElementById('checklistCount').textContent = stats.totalChecklists;
-                document.getElementById('downloadCount').textContent = stats.totalDownloads.toLocaleString();
-                document.getElementById('contributorCount').textContent = stats.totalContributors;
-                document.getElementById('updateCount').textContent = stats.updateFrequency;
-            } catch (error) {
-                console.error('Failed to load stats:', error);
-            }
-        }
-
-        // Render checklists - UPDATED FOR ZIP SUPPORT
-        function renderChecklists() {
-            const grid = document.getElementById('checklistsGrid');
-            grid.innerHTML = checklists.map(checklist => {
-                
-                // Determine file type and display info
-                let fileTypeInfo = '';
-                let downloadButton = '';
-                
-                if (checklist.content) {
-                    if (checklist.content.startsWith('ZIP_BASE64:') || checklist.content.startsWith('ZIP File:')) {
-                        fileTypeInfo = `
-                            <div class="file-type-badge zip-badge">
-                                📦 ZIP Package
-                            </div>
-                        `;
-                        downloadButton = `
-                            <button class="btn-download zip-download" onclick="quickDownload(${checklist.id}, 'zip')">
-                                📦 Download ZIP Package
-                            </button>
-                        `;
-                    } else if (checklist.content.startsWith('PDF_BASE64:') || checklist.content.startsWith('PDF File:')) {
-                        fileTypeInfo = `
-                            <div class="file-type-badge pdf-badge">
-                                📄 PDF Document
-                            </div>
-                        `;
-                        downloadButton = `
-                            <button class="btn-download pdf-download" onclick="quickDownload(${checklist.id}, 'pdf')">
-                                📄 Download PDF
-                            </button>
-                        `;
-                    } else {
-                        // Regular markdown checklist
-                        downloadButton = `
-                            <button class="btn-download" onclick="quickDownload(${checklist.id}, 'pdf')">
-                                📋 Download PDF
-                            </button>
-                        `;
-                    }
-                } else {
-                    downloadButton = `
-                        <button class="btn-download" onclick="quickDownload(${checklist.id}, 'pdf')">
-                            📋 Download PDF
-                        </button>
-                    `;
-                }
-                
-                return `
-                    <div class="checklist-card">
-                        <div class="checklist-header">
-                            <div class="checklist-icon">${checklist.icon}</div>
-                            ${fileTypeInfo}
-                        </div>
-                        <div class="checklist-info">
-                            <h3 class="checklist-title">${checklist.title}</h3>
-                            <p class="checklist-description">${checklist.description}</p>
-                            <div class="checklist-meta">
-                                <span>v${checklist.version}</span>
-                                <span>Updated ${checklist.lastUpdated}</span>
-                            </div>
-                            <div class="checklist-stats">
-                                <span class="stat-badge">
-                                    <span>⬇️</span> ${checklist.downloads.toLocaleString()}
-                                </span>
-                                <span class="stat-badge">
-                                    <span>👥</span> ${checklist.contributors}
-                                </span>
-                            </div>
-                            <div class="checklist-actions">
-                                <button onclick="viewChecklist(${checklist.id})">View Details</button>
-                                ${downloadButton}
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        // View checklist details - UPDATED FOR ZIP SUPPORT
-        async function viewChecklist(checklistId) {
-            const checklist = checklists.find(c => c.id === checklistId);
-            const modalContent = document.getElementById('modalContent');
-            
-            // Determine available formats based on content
-            let formatButtons = '';
-            let fileDescription = '';
-            
-            if (checklist.content) {
-                if (checklist.content.startsWith('ZIP_BASE64:') || checklist.content.startsWith('ZIP File:')) {
-                    // ZIP file checklist
-                    formatButtons = `
-                        <button class="format-btn zip-btn" onclick="downloadChecklist(${checklist.id}, 'zip')">
-                            📦 ZIP Package
-                        </button>
-                    `;
-                    fileDescription = `
-                        <div class="file-info-box zip-info">
-                            <div class="file-icon">📦</div>
-                            <div class="file-details">
-                                <h4>ZIP Package Download</h4>
-                                <p>Contains multiple files, templates, and resources for this checklist.</p>
-                                <small>Perfect for complex checklists with supporting materials.</small>
-                            </div>
-                        </div>
-                    `;
-                } else if (checklist.content.startsWith('PDF_BASE64:') || checklist.content.startsWith('PDF File:')) {
-                    // PDF file checklist
-                    formatButtons = `
-                        <button class="format-btn pdf-btn" onclick="downloadChecklist(${checklist.id}, 'pdf')">
-                            📄 PDF Document
-                        </button>
-                    `;
-                    fileDescription = `
-                        <div class="file-info-box pdf-info">
-                            <div class="file-icon">📄</div>
-                            <div class="file-details">
-                                <h4>PDF Document Download</h4>
-                                <p>Complete checklist in a single PDF document.</p>
-                                <small>Easy to view, print, and share.</small>
-                            </div>
-                        </div>
-                    `;
-                } else {
-                    // Regular markdown checklist
-                    formatButtons = `
-                        <button class="format-btn" onclick="downloadChecklist(${checklist.id}, 'pdf')">PDF</button>
-                        <button class="format-btn" onclick="downloadChecklist(${checklist.id}, 'markdown')">Markdown</button>
-                    `;
-                }
-            } else {
-                formatButtons = `
-                    <button class="format-btn" onclick="downloadChecklist(${checklist.id}, 'pdf')">PDF</button>
-                    <button class="format-btn" onclick="downloadChecklist(${checklist.id}, 'markdown')">Markdown</button>
-                `;
-            }
-            
-            modalContent.innerHTML = `
-                <div style="text-align: center; margin-bottom: 2rem;">
-                    <div style="font-size: 5rem; margin-bottom: 1rem;">${checklist.icon}</div>
-                    <h2>${checklist.title}</h2>
-                    <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 1rem;">
-                        <span class="stat-badge">⬇️ ${checklist.downloads.toLocaleString()} downloads</span>
-                        <span class="stat-badge">👥 ${checklist.contributors} contributors</span>
-                        <span class="stat-badge">🔄 v${checklist.version}</span>
-                    </div>
-                </div>
-                
-                ${fileDescription}
-                
-                <div style="margin-bottom: 2rem;">
-                    <h3 style="margin-bottom: 1rem;">What's Included:</h3>
-                    <ul style="list-style: none; padding: 0;">
-                        ${checklist.features && checklist.features.length > 0 ? 
-                            checklist.features.map(feature => `
-                                <li style="padding: 0.5rem 0; color: var(--text-light);">
-                                    <span style="color: var(--primary-color); font-weight: bold;">✓</span> ${feature}
-                                </li>
-                            `).join('') : 
-                            '<li style="padding: 0.5rem 0; color: var(--text-light);"><span style="color: var(--primary-color); font-weight: bold;">✓</span> Comprehensive checklist included</li>'
-                        }
-                    </ul>
-                </div>
-                
-                <div style="background: var(--bg-light); padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem;">
-                    <h3 style="margin-bottom: 1rem;">Download:</h3>
-                    <div class="format-buttons">
-                        ${formatButtons}
-                    </div>
-                </div>
-                
-                <div style="text-align: center;">
-                    <p style="margin-top: 1rem; color: var(--text-light);">
-                        Licensed under CC BY 4.0 - Free to use, modify, and share
-                    </p>
-                </div>
-            `;
-            
-            document.getElementById('checklistModal').style.display = 'block';
-        }
-
-        // Quick download (PDF by default)
-        async function quickDownload(checklistId, format = 'pdf') {
-            await downloadChecklist(checklistId, format);
-        }
-
-        // Download checklist - UPDATED FOR ZIP SUPPORT
-        async function downloadChecklist(checklistId, format) {
-            const checklist = checklists.find(c => c.id === checklistId);
-            const downloadBtn = event.target;
-            const originalText = downloadBtn.innerHTML;
-            
-            try {
-                // Show loading state
-                downloadBtn.disabled = true;
-                downloadBtn.innerHTML = '<span class="loading"></span> Downloading...';
-                
-                // Create download link
-                const downloadUrl = `${API_BASE}/checklists/${checklistId}/download?format=${format}`;
-                
-                // Create temporary link and trigger download
-                const link = document.createElement('a');
-                link.href = downloadUrl;
-                
-                // Set filename based on format
-                let filename = `${checklist.title.toLowerCase().replace(/\s+/g, '-')}-v${checklist.version}`;
-                if (format === 'zip') {
-                    filename += '.zip';
-                } else if (format === 'pdf') {
-                    filename += '.pdf';
-                } else if (format === 'markdown') {
-                    filename += '.md';
-                }
-                
-                link.download = filename;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                
-                // Update UI
-                checklist.downloads += 1;
-                renderChecklists();
-                
-                // Show success message based on format
-                if (format === 'zip') {
-                    showToast(`Downloading ${checklist.title} ZIP package`);
-                } else if (format === 'pdf') {
-                    showToast(`Downloading ${checklist.title} as PDF`);
-                } else {
-                    showToast(`Downloading ${checklist.title} as ${format.toUpperCase()}`);
-                }
-                
-                // Close modal if open
-                if (document.getElementById('checklistModal').style.display === 'block') {
-                    closeModal();
-                }
-                
-            } catch (error) {
-                console.error('Download failed:', error);
-                showToast('Download failed. Please try again.', 'error');
-            } finally {
-                // Restore button state
-                downloadBtn.disabled = false;
-                downloadBtn.innerHTML = originalText;
-            }
-        }
-
-        // Show toast notification
-        function showToast(message, type = 'success') {
-            const toast = document.getElementById('toast');
-            const toastMessage = document.getElementById('toastMessage');
-            
-            toastMessage.textContent = message;
-            toast.style.background = type === 'error' ? '#ef4444' : 'var(--primary-color)';
-            toast.classList.add('show');
-            
+        // Hide loader when page loads
+        window.addEventListener('load', function() {
             setTimeout(() => {
-                toast.classList.remove('show');
-            }, 3000);
-        }
+                document.getElementById('loader').classList.add('hidden');
+            }, 500);
+        });
 
-        // Show donate modal
-        function showDonateModal() {
-            document.getElementById('donateModal').style.display = 'block';
-        }
+        // Navbar scroll effect
+        window.addEventListener('scroll', function() {
+            const navbar = document.getElementById('navbar');
+            if (window.scrollY > 50) {
+                navbar.classList.add('scrolled');
+            } else {
+                navbar.classList.remove('scrolled');
+            }
+        });
 
-        // Close modals
-        function closeModal() {
-            document.getElementById('checklistModal').style.display = 'none';
-        }
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
 
-        function closeDonateModal() {
-            document.getElementById('donateModal').style.display = 'none';
-        }
+        // Animated counter for stats
+        const counters = document.querySelectorAll('.stat-number');
+        const speed = 200;
 
-        // Close modals when clicking outside
-        window.onclick = function(event) {
-            const checklistModal = document.getElementById('checklistModal');
-            const donateModal = document.getElementById('donateModal');
+        const countUp = (counter) => {
+            const target = +counter.getAttribute('data-target');
+            const count = +counter.innerText;
+            const increment = target / speed;
+
+            if (count < target) {
+                counter.innerText = Math.ceil(count + increment);
+                setTimeout(() => countUp(counter), 10);
+            } else {
+                counter.innerText = target.toLocaleString();
+            }
+        };
+
+        // Intersection Observer for animations
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -100px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    if (entry.target.classList.contains('stat-number')) {
+                        countUp(entry.target);
+                        observer.unobserve(entry.target);
+                    }
+                }
+            });
+        }, observerOptions);
+
+        counters.forEach(counter => {
+            observer.observe(counter);
+        });
+
+        // Add animation classes to elements as they come into view
+        const animateElements = document.querySelectorAll('.checklist-card, .community-card, .contribute-card');
+        
+        const elementObserver = new IntersectionObserver((entries) => {
+            entries.forEach((entry, index) => {
+                if (entry.isIntersecting) {
+                    setTimeout(() => {
+                        entry.target.style.opacity = '0';
+                        entry.target.style.transform = 'translateY(30px)';
+                        
+                        setTimeout(() => {
+                            entry.target.style.transition = 'all 0.6s ease';
+                            entry.target.style.opacity = '1';
+                            entry.target.style.transform = 'translateY(0)';
+                        }, 50);
+                    }, index * 100);
+                    
+                    elementObserver.unobserve(entry.target);
+                }
+            });
+        }, observerOptions);
+
+        animateElements.forEach(el => {
+            el.style.opacity = '0';
+            elementObserver.observe(el);
+        });
+
+        // Newsletter form handling
+        document.querySelector('.newsletter-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const email = this.querySelector('.newsletter-input').value;
+            if (email) {
+                alert('Thanks for subscribing! We\'ll keep you updated.');
+                this.querySelector('.newsletter-input').value = '';
+            }
+        });
+
+        // Add ripple effect to buttons
+        document.querySelectorAll('.btn, .download-btn').forEach(button => {
+            button.addEventListener('click', function(e) {
+                const ripple = document.createElement('span');
+                const rect = this.getBoundingClientRect();
+                const size = Math.max(rect.width, rect.height);
+                const x = e.clientX - rect.left - size / 2;
+                const y = e.clientY - rect.top - size / 2;
+                
+                ripple.style.width = ripple.style.height = size + 'px';
+                ripple.style.left = x + 'px';
+                ripple.style.top = y + 'px';
+                ripple.classList.add('ripple');
+                
+                this.appendChild(ripple);
+                
+                setTimeout(() => ripple.remove(), 600);
+            });
+        });
+
+        // Add CSS for ripple effect
+        const style = document.createElement('style');
+        style.textContent = `
+            .ripple {
+                position: absolute;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.5);
+                transform: scale(0);
+                animation: ripple-animation 0.6s ease-out;
+                pointer-events: none;
+            }
             
-            if (event.target === checklistModal) {
-                closeModal();
+            @keyframes ripple-animation {
+                to {
+                    transform: scale(4);
+                    opacity: 0;
+                }
             }
-            if (event.target === donateModal) {
-                closeDonateModal();
+            
+            .btn, .download-btn {
+                position: relative;
+                overflow: hidden;
             }
-        }
-
-        // Initialize on load
-        window.onload = init;
+        `;
+        document.head.appendChild(style);
     </script>
 </body>
 </html>
