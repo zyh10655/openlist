@@ -4,25 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OpenChecklist - Free Professional Industry Checklists</title>
-    <div class="search-container">
-        <div class="search-wrapper">
-            <input 
-                type="text" 
-                id="searchInput" 
-                placeholder="Search checklists by title, category, or keyword..." 
-                class="search-input"
-                autocomplete="off"
-            >
-            <button onclick="searchChecklists()" class="search-btn" id="searchBtn">
-                <span class="search-icon">🔍</span>
-                <span class="search-text">Search</span>
-            </button>
-            <button onclick="clearSearch()" class="clear-btn" id="clearBtn" style="display: none;">
-                ✕
-            </button>
-        </div>
-        <div id="searchResults" class="search-results-info" style="display: none;"></div>
-    </div>
     <style>
         * {
             margin: 0;
@@ -1010,6 +991,26 @@
         <div class="container">
             <h2 class="section-title">Browse Free Checklists</h2>
             <p class="section-subtitle">All checklists are free to download, modify, and share</p>
+            <!-- Search Bar -->
+            <div class="search-container">
+                <div class="search-wrapper">
+                    <input 
+                        type="text" 
+                        id="searchInput" 
+                        placeholder="Search checklists by title, category, or keyword..." 
+                        class="search-input"
+                        autocomplete="off"
+                    >
+                    <button onclick="searchChecklists()" class="search-btn" id="searchBtn">
+                        <span class="search-icon">🔍</span>
+                        <span class="search-text">Search</span>
+                    </button>
+                    <button onclick="clearSearch()" class="clear-btn" id="clearBtn" style="display: none;">
+                        ✕
+                    </button>
+                </div>
+                <div id="searchResults" class="search-results-info" style="display: none;"></div>
+            </div>
             <div class="checklists-grid" id="checklistsGrid">
                 <!-- Checklists will be dynamically loaded here -->
             </div>
