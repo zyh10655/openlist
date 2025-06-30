@@ -407,6 +407,21 @@ app.get('/api/test-download/:id', async (req, res) => {
     }
 });
 
+// This should already be in your server.js
+app.get('/api/search', async (req, res) => {
+    try {
+        const { q } = req.query;
+        if (!q) {
+            return res.json([]);
+        }
+        
+        const results = await searchChecklists(q);
+        // ... rest of your code
+    } catch (error) {
+        // ... error handling
+    }
+});
+
 // Static files - AFTER API routes
 app.use(express.static(path.join(__dirname, 'public')));
 
