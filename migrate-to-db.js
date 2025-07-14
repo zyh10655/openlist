@@ -1,5 +1,5 @@
 // migrate-to-db.js
-const { initializeDatabase, createChecklist } = require('./database');
+const { initializeDatabase, createChecklist, pool } = require('./database');
 const fs = require('fs').promises;
 const path = require('path');
 
@@ -195,13 +195,100 @@ const checklistsData = [
         ]
     }
 ];
+async function createForumTables() {
+    console.log('Creating forum tables...');
+    
+    try {
+        // Create forum_categories table
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS forum_categories (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(100) NOT NULL,
+                slug VARCHAR(100) UNIQUE NOT NULL,
+                description TEXT,
+                icon VARCHAR(10) DEFAULT '💬',
+                color VARCHAR(7) DEFAULT '#10b981',
+                post_count INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
 
+        // Create forum_topics table
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS forum_topics (
+                id SERIAL PRIMARY KEY,
+                category_id INTEGER REFERENCES forum_categories(id) ON DELETE CASCADE,
+                title VARCHAR(255) NOT NULL,
+                slug VARCHAR(255),
+                author_name VARCHAR(100) NOT NULL,
+                author_email VARCHAR(255) NOT NULL,
+                content TEXT NOT NULL,
+                views INTEGER DEFAULT 0,
+                is_pinned BOOLEAN DEFAULT FALSE,
+                is_locked BOOLEAN DEFAULT FALSE,
+                reply_count INTEGER DEFAULT 0,
+                last_reply_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        // Create forum_replies table
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS forum_replies (
+                id SERIAL PRIMARY KEY,
+                topic_id INTEGER REFERENCES forum_topics(id) ON DELETE CASCADE,
+                parent_reply_id INTEGER REFERENCES forum_replies(id) ON DELETE CASCADE,
+                author_name VARCHAR(100) NOT NULL,
+                author_email VARCHAR(255) NOT NULL,
+                content TEXT NOT NULL,
+                is_solution BOOLEAN DEFAULT FALSE,
+                upvotes INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        // Create indexes
+        await pool.query(`
+            CREATE INDEX IF NOT EXISTS idx_forum_topics_category ON forum_topics(category_id)
+        `);
+        
+        await pool.query(`
+            CREATE INDEX IF NOT EXISTS idx_forum_topics_created ON forum_topics(created_at DESC)
+        `);
+        
+        await pool.query(`
+            CREATE INDEX IF NOT EXISTS idx_forum_replies_topic ON forum_replies(topic_id)
+        `);
+
+        // Insert default categories
+        await pool.query(`
+            INSERT INTO forum_categories (name, slug, description, icon, color) VALUES
+            ('General Discussion', 'general', 'General topics about checklists and business', '💬', '#10b981'),
+            ('Help & Support', 'help', 'Get help with using checklists', '❓', '#3b82f6'),
+            ('Feature Requests', 'features', 'Suggest new features or checklists', '💡', '#f59e0b'),
+            ('Success Stories', 'success', 'Share your success using our checklists', '🎯', '#8b5cf6'),
+            ('Industry Specific', 'industry', 'Discuss industry-specific checklist needs', '🏢', '#ef4444')
+            ON CONFLICT (slug) DO NOTHING
+        `);
+
+        console.log('✓ Forum tables created successfully');
+    } catch (error) {
+        console.error('✗ Failed to create forum tables:', error.message);
+        throw error;
+    }
+}
 async function migrateToDatabase() {
     try {
         console.log('Initializing database...');
         await initializeDatabase();
         
-        console.log('Importing checklists...');
+        // ADD THIS SECTION HERE 👇
+        console.log('\nCreating forum tables...');
+        await createForumTables();
+        
+        console.log('\nImporting checklists...');
         
         for (const checklist of checklistsData) {
             try {
