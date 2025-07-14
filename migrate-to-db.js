@@ -320,6 +320,20 @@ async function migrateToDatabase() {
         process.exit(1);
     }
 }
+// Add forum table creation
+async function createForumTables() {
+    console.log('📬 Creating forum tables...');
+    
+    // Run the SQL from Step 1
+    const forumSQL = `
+        -- Copy the entire SQL from Step 1 here
+    `;
+    
+    await pool.query(forumSQL);
+    console.log('✅ Forum tables created');
+}
 
+// Call it in your main migration function
+await createForumTables();
 // Run migration
 migrateToDatabase();
