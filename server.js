@@ -422,6 +422,20 @@ app.get('/api/search', async (req, res) => {
     }
 });
 
+const forumRoutes = require('./forum-routes');
+
+// Add after your other routes (before the catch-all route)
+app.use('/api/forum', forumRoutes);
+
+// Serve forum pages
+app.get('/forum', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'forum.html'));
+});
+
+app.get('/forum/topic/:id', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'topic.html'));
+});
+
 // Static files - AFTER API routes
 app.use(express.static(path.join(__dirname, 'public')));
 
