@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Topic - OpenChecklist Forum</title>
+    <style>
+        /* Reuse same base styles from forum.html */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #10b981;
+            --secondary-color: #059669;
+            --accent-color: #3b82f6;
+            --text-dark: #1f2937;
+            --text-light: #6b7280;
+            --bg-light: #f9fafb;
+            --border-color: #e5e7eb;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-light);
+            color: var(--text-dark);
+            line-height: 1.6;
+        }
+
+        /* Additional styles for topic page */
+        .topic-container {
+            max-width: 900px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .breadcrumb {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            margin-bottom: 2rem;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+
+        .breadcrumb a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        /* Topic Header */
+        .topic-header {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            margin-bottom: 2rem;
+        }
+
+        .topic-title {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .topic-meta {
+            display: flex;
+            gap: 1rem;
+            color: var(--text-light);
+            font-size: 0.9rem;
+            flex-wrap: wrap;
+        }
+
+        /* Post */
+        .post {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            transition: all 0.3s;
+        }
+
+        .post:hover {
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+
+        .post-header {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .post-avatar {
+            width: 50px;
+            height: 50px;
+            background: var(--primary-color);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .post-info {
+            flex: 1;
+        }
+
+        .post-author {
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .post-date {
+            font-size: 0.85rem;
+            color: var(--text-light);
+        }
+
+        .post-content {
+            margin-left: 66px;
+            color: var(--text-dark);
+            line-height: 1.7;
+            white-space: pre-wrap;
+        }
+
+        .post-actions {
+            margin-left: 66px;
+            margin-top: 1rem;
+            display: flex;
+            gap: 1rem;
+        }
+
+        .post-action {
+            background: none;
+            border: none;
+            color: var(--text-light);
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: color 0.3s;
+        }
+
+        .post-action:hover {
+            color: var(--primary-color);
+        }
+
+        /* Reply Form */
+        .reply-section {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-top: 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .reply-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+        }
+
+        /* Original Post (Topic) */
+        .original-post {
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+            border: 2px solid #bbf7d0;
+        }
+
+        /* Solution Badge */
+        .solution-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            background: var(--primary-color);
+            color: white;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        /* Loading */
+        .loading-container {
+            text-align: center;
+            padding: 4rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Reuse header from forum.html -->
+    <header class="header">
+        <nav class="nav">
+            <a href="/" class="logo">
+                <span>🌟</span> OpenChecklist
+            </a>
+            <ul class="nav-links">
+                <li><a href="/">Home</a></li>
+                <li><a href="/#checklists">Checklists</a></li>
+                <li><a href="/forum">Forum</a></li>
+                <li><a href="/#contribute">Contribute</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <div class="topic-container">
+        <!-- Breadcrumb -->
+        <nav class="breadcrumb" id="breadcrumb">
+            <a href="/forum">Forum</a>
+            <span>›</span>
+            <span id="categoryName">Loading...</span>
+        </nav>
+
+        <!-- Topic Content -->
+        <div id="topicContent">
+            <div class="loading-container">
+                <div class="spinner"></div>
+                <p>Loading discussion...</p>
+            </div>
+        </div>
+
+        <!-- Reply Form -->
+        <div class="reply-section" id="replySection" style="display: none;">
+            <h3 class="reply-title">Join the Discussion</h3>
+            <form id="replyForm" onsubmit="postReply(event)">
+                <div class="form-group">
+                    <label class="form-label">Your Name *</label>
+                    <input type="text" id="replyAuthorName" class="form-input" required>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Your Email *</label>
+                    <input type="email" id="replyAuthorEmail" class="form-input" required>
+                    <small style="color: var(--text-light);">Your email won't be shown publicly</small>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Your Reply *</label>
+                    <textarea id="replyContent" class="form-textarea" rows="6" required 
+                              placeholder="Share your thoughts..."></textarea>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Post Reply</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin + '/api/forum';
+        const topicId = window.location.pathname.split('/').pop();
+        let currentTopic = null;
+
+        // Load topic and replies
+        async function loadTopic() {
+            try {
+                const response = await fetch(`${API_BASE}/topics/${topicId}`);
+                const data = await response.json();
+                
+                currentTopic = data.topic;
+                renderTopic(data);
+            } catch (error) {
+                console.error('Failed to load topic:', error);
+                document.getElementById('topicContent').innerHTML = `
+                    <div class="empty-state">
+                        <h3>Failed to load discussion</h3>
+                        <a href="/forum" class="btn btn-primary">Back to Forum</a>
+                    </div>
+                `;
+            }
+        }
+
+        // Render topic and replies
+        function renderTopic(data) {
+            const { topic, replies } = data;
+            
+            // Update breadcrumb
+            document.getElementById('categoryName').innerHTML = `
+                <a href="/forum#${topic.category_slug}">${topic.category_name}</a>
+                <span>›</span>
+                <span>${topic.title}</span>
+            `;
+            
+            // Update page title
+            document.title = `${topic.title} - OpenChecklist Forum`;
+            
+            // Render topic content
+            let content = `
+                <!-- Topic Header -->
+                <div class="topic-header">
+                    <h1 class="topic-title">${topic.title}</h1>
+                    <div class="topic-meta">
+                        <span>Posted by ${topic.author_name}</span>
+                        <span>•</span>
+                        <span>${formatDate(topic.created_at)}</span>
+                        <span>•</span>
+                        <span>${topic.views} views</span>
+                        <span>•</span>
+                        <span>${replies.length} replies</span>
+                    </div>
+                </div>
+
+                <!-- Original Post -->
+                <div class="post original-post">
+                    <div class="post-header">
+                        <div class="post-avatar">${topic.author_name.charAt(0).toUpperCase()}</div>
+                        <div class="post-info">
+                            <div class="post-author">${topic.author_name}</div>
+                            <div class="post-date">${formatDate(topic.created_at)}</div>
+                        </div>
+                    </div>
+                    <div class="post-content">${escapeHtml(topic.content)}</div>
+                </div>
+            `;
+            
+            // Render replies
+            if (replies.length > 0) {
+                content += '<h3 style="margin: 2rem 0 1rem;">Replies</h3>';
+                content += replies.map(reply => `
+                    <div class="post" data-reply-id="${reply.id}">
+                        <div class="post-header">
+                            <div class="post-avatar">${reply.author_name.charAt(0).toUpperCase()}</div>
+                            <div class="post-info">
+                                <div class="post-author">
+                                    ${reply.author_name}
+                                    ${reply.is_solution ? '<span class="solution-badge">✓ Solution</span>' : ''}
+                                </div>
+                                <div class="post-date">${formatDate(reply.created_at)}</div>
+                            </div>
+                        </div>
+                        <div class="post-content">${escapeHtml(reply.content)}</div>
+                        <div class="post-actions">
+                            <button class="post-action" onclick="upvoteReply(${reply.id})">
+                                👍 Helpful (${reply.upvotes || 0})
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            
+            document.getElementById('topicContent').innerHTML = content;
+            document.getElementById('replySection').style.display = 'block';
+        }
+
+        // Post reply
+        async function postReply(event) {
+            event.preventDefault();
+            
+            const submitBtn = event.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Posting...';
+            
+            try {
+                const data = {
+                    content: document.getElementById('replyContent').value,
+                    author_name: document.getElementById('replyAuthorName').value,
+                    author_email: document.getElementById('replyAuthorEmail').value
+                };
+                
+                const response = await fetch(`${API_BASE}/topics/${topicId}/replies`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                if (response.ok) {
+                    // Reload the page to show new reply
+                    window.location.reload();
+                } else {
+                    const error = await response.json();
+                    alert(error.error || 'Failed to post reply');
+                }
+            } catch (error) {
+                console.error('Failed to post reply:', error);
+                alert('Failed to post reply. Please try again.');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+            }
+        }
+
+        // Format date
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString() + ' at ' + date.toLocaleTimeString();
+        }
+
+        // Escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Upvote reply (placeholder)
+        function upvoteReply(replyId) {
+            alert('Upvoting feature coming soon!');
+        }
+
+        // Load on start
+        window.onload = loadTopic;
+    </script>
+</body>
+</html>
