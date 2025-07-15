@@ -195,8 +195,10 @@ const checklistsData = [
         ]
     }
 ];
+
+// Forum table creation function
 async function createForumTables() {
-    console.log('Creating forum tables...');
+    console.log('📬 Creating forum tables...');
     
     try {
         // Create forum_categories table
@@ -273,27 +275,32 @@ async function createForumTables() {
             ON CONFLICT (slug) DO NOTHING
         `);
 
-        console.log('✓ Forum tables created successfully');
+        console.log('✅ Forum tables created successfully');
     } catch (error) {
-        console.error('✗ Failed to create forum tables:', error.message);
+        console.error('❌ Failed to create forum tables:', error.message);
         throw error;
     }
 }
+
+// Main migration function
 async function migrateToDatabase() {
     try {
-        console.log('Initializing database...');
+        console.log('🚀 Starting database migration...\n');
+        
+        console.log('📋 Initializing database...');
         await initializeDatabase();
+        console.log('✅ Database initialized\n');
         
-        // ADD THIS SECTION HERE 👇
-        console.log('\nCreating forum tables...');
+        console.log('💬 Creating forum tables...');
         await createForumTables();
+        console.log('✅ Forum tables created\n');
         
-        console.log('\nImporting checklists...');
+        console.log('📝 Importing checklists...');
         
         for (const checklist of checklistsData) {
             try {
                 const id = await createChecklist(checklist);
-                console.log(`✓ Imported: ${checklist.title} (ID: ${id})`);
+                console.log(`✅ Imported: ${checklist.title} (ID: ${id})`);
                 
                 // Also import any existing markdown files
                 const mdFile = `${checklist.title.toLowerCase().replace(/\s+/g, '-')}.md`;
@@ -302,38 +309,24 @@ async function migrateToDatabase() {
                 try {
                     const mdContent = await fs.readFile(mdPath, 'utf8');
                     // You could update the content field with the actual markdown
-                    console.log(`  - Found existing markdown file: ${mdFile}`);
+                    console.log(`  📄 Found existing markdown file: ${mdFile}`);
                 } catch (err) {
                     // File doesn't exist, that's okay
                 }
                 
             } catch (err) {
-                console.error(`✗ Failed to import ${checklist.title}:`, err.message);
+                console.error(`❌ Failed to import ${checklist.title}:`, err.message);
             }
         }
         
-        console.log('\nMigration complete!');
+        console.log('\n✨ Migration complete!');
         process.exit(0);
         
     } catch (error) {
-        console.error('Migration failed:', error);
+        console.error('❌ Migration failed:', error);
         process.exit(1);
     }
 }
-// Add forum table creation
-async function createForumTables() {
-    console.log('📬 Creating forum tables...');
-    
-    // Run the SQL from Step 1
-    const forumSQL = `
-        -- Copy the entire SQL from Step 1 here
-    `;
-    
-    await pool.query(forumSQL);
-    console.log('✅ Forum tables created');
-}
 
-// Call it in your main migration function
-await createForumTables();
 // Run migration
 migrateToDatabase();
